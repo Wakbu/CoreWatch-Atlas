@@ -35,4 +35,16 @@ internal static partial class MetricsCollectionLog
         Level = LogLevel.Information,
         Message = "Metrics collection stopped for {Platform}.")]
     public static partial void Stopped(ILogger logger, string platform);
+
+    [LoggerMessage(
+        EventId = 1004,
+        Level = LogLevel.Error,
+        Message = "Local metrics output failed; collection will continue.")]
+    public static partial void OutputFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(
+        EventId = 1010,
+        Level = LogLevel.Information,
+        Message = "Prometheus endpoint listening at {Url}/metrics.")]
+    public static partial void PrometheusStarted(ILogger logger, string url);
 }
