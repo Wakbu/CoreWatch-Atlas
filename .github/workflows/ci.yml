@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+
+      - name: Restore
+        run: dotnet restore CoreWatch.Atlas.sln --force-evaluate
+
+      - name: Build Debug
+        run: dotnet build CoreWatch.Atlas.sln -c Debug --no-restore -warnaserror
+
+      - name: Build Release
+        run: dotnet build CoreWatch.Atlas.sln -c Release --no-restore -warnaserror
+
+      - name: Test Release
+        run: dotnet test CoreWatch.Atlas.sln -c Release --no-build --no-restore
+
+      - name: Audit vulnerable packages
+        run: dotnet list CoreWatch.Atlas.sln package --vulnerable --include-transitive
+
+      - name: Audit deprecated packages
+        run: dotnet list CoreWatch.Atlas.sln package --deprecated --include-transitive
