@@ -14,15 +14,16 @@
 
 ## 현재 구현
 
-공통 계약과 Agent 수집 오케스트레이션을 완료한 단계다.
+공통 계약, Agent 수집 오케스트레이션과 Linux Collector MVP를 완료했다.
 
 - `CoreWatch.Atlas.Contracts`: 비동기 수집 인터페이스와 플랫폼 독립 Snapshot 계약
-- 공통 모델: 장비 식별, CPU, 메모리, 파일 시스템, 디스크 누적 I/O, 네트워크 누적 I/O, UTC 수집 시각, 업타임
-- 계약 불변 조건: 필수 식별자, CPU 비율 범위, 용량 관계, UTC 시각, 중복 장치 키, 입력 컬렉션 복사
-- `CoreWatch.Atlas.Agent`: Collector DI, 기본 15초 주기 수집, 취소 전달, 예외 격리·재시도, 구조화 로그
-- 실제 Collector가 추가되기 전까지 명시적으로 실패하는 임시 `UnconfiguredSystemMetricsCollector` 등록
-- `CoreWatch.Atlas.Contracts.Tests`와 `CoreWatch.Atlas.Agent.Tests`: 계약 및 Agent 자동 테스트 14개
-- Windows/Linux Collector, Server/API, Web은 아직 생성하지 않음
+- `CoreWatch.Atlas.Agent`: 기본 15초 주기 수집, 취소 전달, 예외 격리·재시도, 구조화 로그
+- `CoreWatch.Atlas.Collectors.Linux`: CPU, 메모리, 파일 시스템, 디스크·네트워크 누적 I/O, 업타임과 장비 식별 수집
+- Linux Agent는 실제 Collector를 자동 선택하며 Windows는 Windows Collector 구현 전까지 미구성 오류를 명시적으로 보고
+- Linux 필수 `/proc` 오류는 전달하고 선택 컬렉션의 권한 제한·파일 누락은 안전하게 격리
+- 자동 테스트 24개: 계약 10, Agent 4, Linux 파서·Collector 10
+- Ubuntu 테스트는 실제 `/proc` Snapshot 수집을 검증
+- Windows Collector, Server/API, Web은 아직 생성하지 않음
 - 원격 명령 실행이나 시스템 변경 기능은 구현하지 않음
 
 ## 기술 기준
@@ -30,20 +31,13 @@
 - Target Framework: `net10.0`
 - SDK: `10.0.302` (`global.json`, `latestPatch`)
 - Runtime/Hosting packages: `10.0.10`
-- Test SDK: `MSTest.Sdk/4.3.2`
-- Test runner: Microsoft Testing Platform
+- Test SDK: `MSTest.Sdk/4.3.2`, Microsoft Testing Platform
 - 경고는 오류로 처리
 - 줄바꿈: 기본 LF, Windows 명령 파일은 CRLF
 
 ## 자동 검증
 
-GitHub Actions 파일: `.github/workflows/ci.yml`
-
-- 실행 조건: `main` push, `main` 대상 pull request, 수동 실행
-- 운영체제: `ubuntu-latest`, `windows-latest`
-- 단계: 복원, Debug 빌드, Release 빌드, 테스트, 취약 패키지, Legacy 패키지 검사
-- 최소 `contents: read` 권한
-- 최근 `main` 성공 실행: `https://github.com/Wakbu/CoreWatch-Atlas/actions/runs/30243114963`
+GitHub Actions `.github/workflows/ci.yml`은 `main` push와 PR에서 Ubuntu·Windows 복원, Debug/Release 빌드, 테스트, 취약·Legacy 패키지 검사를 수행한다.
 
 로컬 검증 명령:
 
@@ -59,10 +53,10 @@ dotnet list CoreWatch.Atlas.sln package --deprecated --include-transitive
 마지막 검증 결과:
 
 - Windows 로컬 Debug/Release: 경고 0, 오류 0
-- MTP 테스트: 14/14 통과
+- MTP 테스트: 24/24 통과
 - 취약·Legacy 패키지: 없음
-- Release Agent 시작 및 테스트 프로세스 정리 통과
-- GitHub-hosted Windows와 Ubuntu CI 통과
+- Windows Agent 스모크 및 임시 프로세스 정리 통과
+- GitHub-hosted Windows·Ubuntu CI 통과, Ubuntu에서 실제 Linux Snapshot 수집
 
 ## 완료된 주요 변경
 
@@ -71,25 +65,29 @@ dotnet list CoreWatch.Atlas.sln package --deprecated --include-transitive
 - PR #3: Windows·Ubuntu GitHub Actions CI 추가
 - PR #4: 새 채팅 인수인계를 위한 상태·작업 순서 문서 추가
 - PR #5: 공통 메트릭 계약과 불변 조건 테스트 구현
-- Collector DI와 Agent 주기 수집·취소·예외 복구·구조화 로그 구현
+- PR #6: Collector DI와 Agent 주기 수집·취소·예외 복구·구조화 로그 구현
+- Linux Collector MVP: `/proc` 파서, 오류 정책, Agent 연결, fixture와 Ubuntu 실환경 테스트
+
+## 제품·UI 결정
+
+Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감각과 사용 흐름을 참고한다. WPF를 복사하지 않고 반응형 Atlas 웹 디자인 시스템으로 분리하며 기존 CoreWatch에 런타임 의존하지 않는다.
 
 ## 알려진 상태와 제한
 
-- Agent 수집 루프는 연결됐지만 실제 OS Collector가 없어 현재는 명시적 미구성 오류를 격리하고 재시도한다.
-- Server/API와 Web UI는 아직 없다.
-- Linux 실장 테스트용 호스트는 아직 연결하지 않았다. GitHub Ubuntu CI는 빌드·테스트 호환성만 검증한다.
-- .NET 10 SDK 설치 관리자가 재부팅을 권고했지만 설치 직후 모든 검증은 통과했다.
-- 릴리스된 Atlas 버전과 배포 패키지는 아직 없다.
+- Linux Agent는 실제 로컬 Snapshot을 수집하지만 아직 출력·서버 전송 기능이 없어 로그에는 수집 성공 이벤트만 남는다.
+- Windows에서는 실제 Collector가 없어 미구성 오류를 격리하고 재시도한다.
+- Server/API와 Web UI, 릴리스·배포 패키지는 아직 없다.
+- 제한된 Linux 환경에서는 접근 불가능한 디스크·네트워크·마운트 지표가 빈 컬렉션일 수 있다.
 
 ## 다음 작업
 
-다음 구현은 `docs/NEXT_STEPS.md`의 3단계인 Linux Collector MVP다. `/proc` fixture 기반 파서와 Ubuntu 통합 검증부터 진행한다.
+다음 구현 단계는 `docs/NEXT_STEPS.md`의 4단계인 Windows Collector MVP다. 시작 전 범위와 완료 조건을 설명하고 사용자 승인을 받는다.
 
 ## 관련 문서
 
 - 전체 설계: `docs/COREWATCH_ATLAS_DESIGN.md`
 - 메트릭 계약: `docs/METRICS_CONTRACT.md`
 - Agent 수집 루프: `docs/AGENT_COLLECTION.md`
+- Linux Collector: `docs/LINUX_COLLECTOR.md`
 - 다음 작업: `docs/NEXT_STEPS.md`
 - 작업 규칙: `AGENTS.md`
-- 제품 소개: `README.md`

@@ -13,5 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CoreWatch.Atlas.Contracts\CoreWatch.Atlas.Contracts.csproj" />
+    <ProjectReference Include="..\CoreWatch.Atlas.Collectors.Linux\CoreWatch.Atlas.Collectors.Linux.csproj" />
   </ItemGroup>
 </Project>

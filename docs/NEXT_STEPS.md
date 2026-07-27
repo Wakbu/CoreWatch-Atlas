@@ -6,57 +6,31 @@
 
 완료일: 2026-07-27
 
-결과: Windows와 Linux Collector가 동일하게 반환할 플랫폼 독립 데이터 계약, 값 검증, 자동 테스트 10개를 구현했다.
-
-구현 범위:
-
-- `ISystemMetricsCollector` 비동기 인터페이스
-- `SystemMetricsSnapshot`과 장비 식별 정보
-- CPU 사용률과 논리 프로세서 수
-- 전체·사용·가용 메모리 바이트
-- 파일 시스템별 전체·가용 바이트
-- 디스크별 읽기·쓰기 누적 바이트
-- 네트워크 인터페이스별 송수신 누적 바이트
-- 업타임과 UTC 수집 시각
-- 단위, null 허용 범위, 값의 불변 조건 문서화
-- 계약 생성·검증 자동 테스트
-
-제외 범위:
-
-- Windows/Linux 실제 수집 구현
-- 온도·GPU·SMART
-- 서버 전송과 `/metrics`
-- 원격 제어
-
-완료 조건:
-
-- Contracts와 Tests만 변경
-- 경고 0 Debug/Release 빌드
-- 정상값·경계값·잘못된 값 테스트
-- Windows·Ubuntu CI 통과
+Windows와 Linux Collector가 공유하는 불변 Snapshot 계약과 자동 테스트 10개를 구현했다.
 
 ## 2. Collector 추상화와 Agent 연결 (완료)
 
 완료일: 2026-07-27
 
-- Collector와 Worker DI 등록
-- 설정 가능한 간격의 주기적 Snapshot 수집
-- 호스트 취소 전달과 수집 예외 격리·재시도
-- Event ID 기반 구조화 로그
-- Fake Collector 기반 DI·재시도·취소·검증 테스트
-- 서버 전송은 포함하지 않음
+Collector DI, 설정 가능한 수집 주기, 취소 전달, 오류 격리·재시도와 구조화 로그를 구현했다.
 
-## 3. Linux Collector MVP
+## 3. Linux Collector MVP (완료)
 
-- `/proc/stat`, `/proc/meminfo`, `/proc/diskstats`, `/proc/net/dev`, `/proc/uptime`
-- Ubuntu 통합 테스트 fixture
-- 권한 부족과 파일 누락 처리
+완료일: 2026-07-27
+
+- `/proc/stat`, `/proc/meminfo`, `/proc/diskstats`, `/proc/net/dev`, `/proc/uptime` 파서
+- 접근 가능한 Linux 파일 시스템 용량과 안정적인 장비 식별자
+- CPU 누적 카운터 차이 계산과 누적 I/O 바이트 변환
+- 필수 파일 오류 전달, 선택 지표 권한·파일 누락 격리, 취소 지원
+- Windows·Linux 공용 fixture 테스트와 Ubuntu 실제 `/proc` 통합 테스트
+- Linux Agent의 실제 Collector 자동 선택
 
 ## 4. Windows Collector MVP
 
 - CPU, 메모리, 고정 디스크, 네트워크, 업타임
 - Windows 종속 코드는 Collector 프로젝트로 격리
 - 기존 CoreWatch 코드 직접 참조 금지
+- Windows CI에서 실제 수집 통합 검증
 
 ## 5. Agent 로컬 출력과 Prometheus 형식
 
@@ -76,18 +50,15 @@
 
 - 장비 목록과 상태
 - 장비별 CPU·메모리·디스크·네트워크 차트
-- 기간별 이력
-- 반응형 UI
+- 기간별 이력과 반응형 UI
+- 기존 CoreWatch 개인 사용자판의 시각 언어와 사용 흐름을 참고하되 Atlas 전용 웹 디자인 시스템으로 분리
 
 ## 공통 완료 규칙
 
-각 단계에서 다음을 모두 수행한다.
-
 - 의도하지 않은 파일 변경 확인
-- 의존성 복원
-- 취약·Legacy 패키지 검사
+- 의존성 복원과 취약·Legacy 패키지 검사
 - Debug/Release 경고 0 빌드
 - 자동 테스트와 필요한 스모크 테스트
 - Windows·Ubuntu GitHub Actions 통과
-- `CURRENT_STATE.md`와 이 문서 갱신
-- 별도 브랜치와 PR을 사용하고, 승인된 작업은 검증 후 자동으로 squash 병합·동기화
+- `CURRENT_STATE.md`와 관련 문서 갱신
+- 별도 브랜치와 PR, 검증 후 자동 squash 병합·동기화
