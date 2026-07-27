@@ -2,11 +2,13 @@
 
 이 문서는 실행 순서와 각 단계의 완료 조건을 관리한다. 한 번에 한 단계만 승인받아 진행하며, 완료 후 `CURRENT_STATE.md`를 갱신한다.
 
-## 1. 공통 메트릭 계약
+## 1. 공통 메트릭 계약 (완료)
 
-목표: Windows와 Linux Collector가 동일하게 반환할 플랫폼 독립 데이터 계약을 정의한다.
+완료일: 2026-07-27
 
-예정 범위:
+결과: Windows와 Linux Collector가 동일하게 반환할 플랫폼 독립 데이터 계약, 값 검증, 자동 테스트 10개를 구현했다.
+
+구현 범위:
 
 - `ISystemMetricsCollector` 비동기 인터페이스
 - `SystemMetricsSnapshot`과 장비 식별 정보

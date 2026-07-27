@@ -14,11 +14,13 @@
 
 ## 현재 구현
 
-현재는 기능 구현 전 개발 기반 단계다.
+공통 메트릭 계약 구현을 완료한 단계다.
 
-- `CoreWatch.Atlas.Contracts`: 공통 계약 프로젝트. 현재 Assembly marker만 존재
+- `CoreWatch.Atlas.Contracts`: 비동기 수집 인터페이스와 플랫폼 독립 Snapshot 계약
+- 공통 모델: 장비 식별, CPU, 메모리, 파일 시스템, 디스크 누적 I/O, 네트워크 누적 I/O, UTC 수집 시각, 업타임
+- 계약 불변 조건: 필수 식별자, CPU 비율 범위, 용량 관계, UTC 시각, 중복 장치 키, 입력 컬렉션 복사
 - `CoreWatch.Atlas.Agent`: .NET Worker Service 기본 골격
-- `CoreWatch.Atlas.Contracts.Tests`: MSTest 기반 계약 테스트 골격
+- `CoreWatch.Atlas.Contracts.Tests`: 정상·경계·오류·취소 계약 테스트 10개
 - Windows/Linux Collector, Server/API, Web은 아직 생성하지 않음
 - 원격 명령 실행이나 시스템 변경 기능은 구현하지 않음
 
@@ -40,7 +42,7 @@ GitHub Actions 파일: `.github/workflows/ci.yml`
 - 운영체제: `ubuntu-latest`, `windows-latest`
 - 단계: 복원, Debug 빌드, Release 빌드, 테스트, 취약 패키지, Legacy 패키지 검사
 - 최소 `contents: read` 권한
-- 최근 성공 실행: `https://github.com/Wakbu/CoreWatch-Atlas/actions/runs/30241845943`
+- 최근 `main` 성공 실행: `https://github.com/Wakbu/CoreWatch-Atlas/actions/runs/30242248449`
 
 로컬 검증 명령:
 
@@ -56,7 +58,7 @@ dotnet list CoreWatch.Atlas.sln package --deprecated --include-transitive
 마지막 검증 결과:
 
 - Windows 로컬 Debug/Release: 경고 0, 오류 0
-- MTP 테스트: 1/1 통과
+- MTP 테스트: 10/10 통과
 - 취약·Legacy 패키지: 없음
 - Release Agent 시작 및 테스트 프로세스 정리 통과
 - GitHub-hosted Windows와 Ubuntu CI 통과
@@ -66,6 +68,8 @@ dotnet list CoreWatch.Atlas.sln package --deprecated --include-transitive
 - PR #1: 초기 .NET 솔루션, Agent, Contracts, 테스트 골격
 - PR #2: .NET 10 LTS와 Microsoft Testing Platform 전환
 - PR #3: Windows·Ubuntu GitHub Actions CI 추가
+- PR #4: 새 채팅 인수인계를 위한 상태·작업 순서 문서 추가
+- 공통 메트릭 계약과 불변 조건 테스트 구현
 
 ## 알려진 상태와 제한
 
@@ -77,11 +81,12 @@ dotnet list CoreWatch.Atlas.sln package --deprecated --include-transitive
 
 ## 다음 작업
 
-다음 구현은 `docs/NEXT_STEPS.md`의 1단계인 공통 메트릭 계약 정의다. 운영체제별 수집 코드를 먼저 작성하지 않는다.
+다음 구현은 `docs/NEXT_STEPS.md`의 2단계인 Collector 추상화와 Agent 연결이다. 실제 Windows/Linux 수집과 서버 전송은 아직 포함하지 않는다.
 
 ## 관련 문서
 
 - 전체 설계: `docs/COREWATCH_ATLAS_DESIGN.md`
+- 메트릭 계약: `docs/METRICS_CONTRACT.md`
 - 다음 작업: `docs/NEXT_STEPS.md`
 - 작업 규칙: `AGENTS.md`
 - 제품 소개: `README.md`
