@@ -59,6 +59,16 @@ CoreWatch.Atlas.Web
 - 기존 CoreWatch 버전과 Atlas 버전은 서로 연동하지 않습니다.
 - 정식 운영 요구사항을 충족한 뒤 `1.0.0`을 배포합니다.
 
+## 개발 빌드
+
+```shell
+dotnet restore CoreWatch.Atlas.sln
+dotnet build CoreWatch.Atlas.sln -c Debug --no-restore
+dotnet build CoreWatch.Atlas.sln -c Release --no-restore
+dotnet test CoreWatch.Atlas.sln -c Release --no-build
+dotnet list CoreWatch.Atlas.sln package --vulnerable --include-transitive
+```
+
 ## 라이선스
 
 CoreWatch-Atlas는 [Apache License 2.0](LICENSE)에 따라 배포됩니다.
