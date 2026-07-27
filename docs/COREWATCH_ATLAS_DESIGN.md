@@ -177,7 +177,7 @@ Prometheus  ─ 선택적 연동 ────────────┘
 
 | 영역 | 권장 기술 |
 |---|---|
-| 공통 런타임 | .NET 9, 향후 LTS 전환 검토 |
+| 공통 런타임 | .NET 10 LTS |
 | 에이전트 | .NET Worker Service |
 | 서버/API | ASP.NET Core |
 | 웹 UI | Blazor Web App |
