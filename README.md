@@ -2,25 +2,36 @@
 
 CoreWatch-Atlas는 Windows와 Linux 장비의 상태를 한곳에서 확인하기 위한 크로스플랫폼 시스템 모니터링 플랫폼입니다.
 
-> 현재는 설계 및 초기 개발 단계이며 아직 배포 가능한 버전이 없습니다.
+> 현재 Agent 로컬 모니터링까지 구현됐으며 정식 배포 패키지는 아직 없습니다.
+
+## 현재 기능
+
+- Windows·Linux CPU, 메모리, 파일 시스템, 디스크·네트워크 누적 I/O와 업타임 수집
+- camelCase 한 줄 JSON Snapshot 출력
+- 선택적 Prometheus 호환 `/metrics`
+- 읽기 전용 동작과 수집·출력 오류 격리
+
+[현재 구현 및 인수인계](CURRENT_STATE.md) · [다음 작업](docs/NEXT_STEPS.md) · [전체 설계](docs/COREWATCH_ATLAS_DESIGN.md)
 
 ## 개발 요구사항
 
-- .NET SDK 10.0.302 이상(10.0.3xx feature band)
+- .NET SDK 10.0.302 이상
 - Windows 또는 Linux
 
-## 프로젝트 상태
+## 로컬 실행
 
-- [현재 구현 및 인수인계](CURRENT_STATE.md)
-- [다음 작업 순서](docs/NEXT_STEPS.md)
-- [전체 전환 설계](docs/COREWATCH_ATLAS_DESIGN.md)
+```shell
+dotnet run --project src/CoreWatch.Atlas.Agent/CoreWatch.Atlas.Agent.csproj -c Release
+```
+
+기본 설정은 15초마다 JSON Snapshot을 출력하며 Prometheus endpoint는 비활성화돼 있습니다. `/metrics` 활성화와 지표 목록은 [로컬 출력 문서](docs/LOCAL_OUTPUT.md)를 참고하세요.
 
 ## 제품 구분
 
-- **CoreWatch**: 단일 Windows PC를 위한 WPF 기반 로컬 진단·벤치마크·최적화 앱
-- **CoreWatch-Atlas**: 여러 Windows·Linux 장비를 위한 에이전트·서버·웹 통합 관제 플랫폼
+- **CoreWatch**: 단일 Windows PC를 위한 WPF 로컬 진단·벤치마크·최적화 앱
+- **CoreWatch-Atlas**: 여러 Windows·Linux 장비를 위한 Agent·Server·Web 통합 관제 플랫폼
 
-두 제품은 저장소, 버전, 태그, CI/CD 및 GitHub Release를 독립적으로 관리합니다.
+두 제품은 저장소, 버전, 태그, CI/CD와 GitHub Release를 독립적으로 관리합니다.
 
 ## 목표 구조
 
@@ -30,45 +41,16 @@ Linux Host  ─ CoreWatch Atlas Agent ──┼─ Atlas Server/API ─ Atlas We
 Prometheus  ─ 선택적 연동 ────────────┘
 ```
 
-## 초기 목표
+초기 버전은 읽기 전용 모니터링에 집중하며 원격 명령 실행과 시스템 최적화를 포함하지 않습니다.
 
-- Windows 및 Linux 공통 시스템 지표 수집
-- 여러 장비 등록과 온라인 상태 확인
-- 웹 기반 실시간 현황 및 기간별 이력 조회
-- Prometheus 호환 `/metrics` 제공
-- HTTPS와 장비별 인증
-- Docker, systemd 및 Windows Service 배포
+## 개발 상태
 
-초기 버전은 읽기 전용 모니터링에 집중하며 원격 명령 실행과 시스템 최적화는 포함하지 않습니다.
-
-## 예정 구성 요소
-
-```text
-CoreWatch.Atlas.Contracts
-CoreWatch.Atlas.Agent
-CoreWatch.Atlas.Collectors.Windows
-CoreWatch.Atlas.Collectors.Linux
-CoreWatch.Atlas.Server
-CoreWatch.Atlas.Web
-```
-
-## 개발 단계
-
-1. 저장소와 공통 빌드 구조 준비
-2. Windows/Linux Agent MVP
-3. 중앙 Server/API
+1. 저장소와 공통 빌드 구조: 완료
+2. Windows/Linux Agent와 로컬 출력: 완료
+3. 중앙 Server/API: 다음 단계
 4. 웹 대시보드
-5. 서비스 설치, 인증 및 Docker 배포
-6. Prometheus 호환
-7. `1.0.0` 안정화
-
-자세한 내용은 [크로스플랫폼 전환 설계](docs/COREWATCH_ATLAS_DESIGN.md)를 참고하세요.
-
-## 버전 정책
-
-- Atlas는 `0.1.0`부터 독립적으로 시작합니다.
-- 기존 CoreWatch 버전과 Atlas 버전은 서로 연동하지 않습니다.
-- 정식 운영 요구사항을 충족한 뒤 `1.0.0`을 배포합니다.
+5. 서비스 설치, 인증과 Docker 배포
+6. `1.0.0` 안정화
 
 ## 개발 빌드
 
@@ -80,6 +62,6 @@ dotnet test CoreWatch.Atlas.sln -c Release --no-build
 dotnet list CoreWatch.Atlas.sln package --vulnerable --include-transitive
 ```
 
-## 라이선스
+## 버전과 라이선스
 
-CoreWatch-Atlas는 [Apache License 2.0](LICENSE)에 따라 배포됩니다.
+Atlas는 기존 CoreWatch와 독립된 `0.x` 버전으로 시작하며 정식 운영 요구사항을 충족한 뒤 `1.0.0`을 배포합니다. 라이선스는 [Apache License 2.0](LICENSE)입니다.

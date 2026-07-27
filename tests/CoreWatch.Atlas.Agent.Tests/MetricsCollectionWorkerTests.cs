@@ -34,8 +34,11 @@ public sealed class MetricsCollectionWorkerTests
             TimeSpan.FromSeconds(1),
             provider.GetRequiredService<IOptions<MetricsCollectionOptions>>()
                 .Value.Interval);
+        Assert.IsNotNull(provider.GetRequiredService<LatestMetricsSnapshotStore>());
         Assert.IsTrue(provider.GetServices<IHostedService>()
             .Any(static service => service is MetricsCollectionWorker));
+        Assert.IsTrue(provider.GetServices<IHostedService>()
+            .Any(static service => service is PrometheusEndpointWorker));
     }
 
     [TestMethod]
@@ -68,6 +71,41 @@ public sealed class MetricsCollectionWorkerTests
         Assert.AreEqual(LogLevel.Error, error.Level);
         Assert.AreEqual("test", error.Properties["Platform"]);
         Assert.IsInstanceOfType<InvalidOperationException>(error.Exception);
+    }
+
+    [TestMethod]
+    public async Task OutputFailureIsIsolatedAndCollectionContinues()
+    {
+        var secondCapture = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var collector = new FakeCollector
+        {
+            Capture = (attempt, _) =>
+            {
+                if (attempt >= 2)
+                {
+                    secondCapture.TrySetResult();
+                }
+
+                return ValueTask.FromResult(CreateSnapshot());
+            },
+        };
+        var logger = new RecordingLogger<MetricsCollectionWorker>();
+        var disposedOutput = new StringWriter();
+        disposedOutput.Dispose();
+        var worker = CreateWorker(
+            collector,
+            logger,
+            TimeSpan.FromMilliseconds(10),
+            disposedOutput,
+            jsonEnabled: true);
+
+        await worker.StartAsync(CancellationToken.None);
+        await secondCapture.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        await worker.StopAsync(CancellationToken.None);
+
+        Assert.IsGreaterThanOrEqualTo(2, collector.CaptureCount);
+        Assert.IsTrue(logger.Entries.Any(entry => entry.EventId.Id == 1004));
     }
 
     [TestMethod]
@@ -121,11 +159,18 @@ public sealed class MetricsCollectionWorkerTests
     private static MetricsCollectionWorker CreateWorker(
         ISystemMetricsCollector collector,
         ILogger<MetricsCollectionWorker> logger,
-        TimeSpan interval)
+        TimeSpan interval,
+        TextWriter? output = null,
+        bool jsonEnabled = false)
     {
+        var publisher = new MetricsSnapshotPublisher(
+            new LatestMetricsSnapshotStore(),
+            output ?? TextWriter.Null,
+            Options.Create(new LocalOutputOptions { JsonEnabled = jsonEnabled }));
         return new MetricsCollectionWorker(
             collector,
             logger,
+            publisher,
             Options.Create(new MetricsCollectionOptions { Interval = interval }),
             TimeProvider.System);
     }

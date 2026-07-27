@@ -5,45 +5,64 @@ namespace CoreWatch.Atlas.Agent;
 
 public sealed class MetricsCollectionWorker : BackgroundService
 {
-    private readonly ISystemMetricsCollector _collector;
-    private readonly ILogger<MetricsCollectionWorker> _logger;
-    private readonly TimeProvider _timeProvider;
-    private readonly TimeSpan _interval;
+    private readonly ISystemMetricsCollector collector;
+    private readonly ILogger<MetricsCollectionWorker> logger;
+    private readonly MetricsSnapshotPublisher publisher;
+    private readonly TimeProvider timeProvider;
+    private readonly TimeSpan interval;
 
     public MetricsCollectionWorker(
         ISystemMetricsCollector collector,
         ILogger<MetricsCollectionWorker> logger,
+        MetricsSnapshotPublisher publisher,
         IOptions<MetricsCollectionOptions> options,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(collector);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(publisher);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
-        var interval = options.Value.Interval;
-        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(interval, TimeSpan.Zero);
+        var configuredInterval = options.Value.Interval;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(
+            configuredInterval,
+            TimeSpan.Zero);
 
-        _collector = collector;
-        _logger = logger;
-        _timeProvider = timeProvider;
-        _interval = interval;
+        this.collector = collector;
+        this.logger = logger;
+        this.publisher = publisher;
+        this.timeProvider = timeProvider;
+        interval = configuredInterval;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        MetricsCollectionLog.Started(_logger, _collector.Platform, _interval);
+        MetricsCollectionLog.Started(logger, collector.Platform, interval);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                var snapshot = await _collector.CaptureAsync(stoppingToken);
+                var snapshot = await collector.CaptureAsync(stoppingToken);
                 MetricsCollectionLog.Captured(
-                    _logger,
+                    logger,
                     snapshot.Agent.AgentId,
-                    _collector.Platform,
+                    collector.Platform,
                     snapshot.CapturedAtUtc);
+
+                try
+                {
+                    await publisher.PublishAsync(snapshot, stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception exception)
+                {
+                    MetricsCollectionLog.OutputFailed(logger, exception);
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -51,12 +70,12 @@ public sealed class MetricsCollectionWorker : BackgroundService
             }
             catch (Exception exception)
             {
-                MetricsCollectionLog.Failed(_logger, exception, _collector.Platform);
+                MetricsCollectionLog.Failed(logger, exception, collector.Platform);
             }
 
             try
             {
-                await Task.Delay(_interval, _timeProvider, stoppingToken);
+                await Task.Delay(interval, timeProvider, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -64,6 +83,6 @@ public sealed class MetricsCollectionWorker : BackgroundService
             }
         }
 
-        MetricsCollectionLog.Stopped(_logger, _collector.Platform);
+        MetricsCollectionLog.Stopped(logger, collector.Platform);
     }
 }
