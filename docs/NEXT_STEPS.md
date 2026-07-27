@@ -35,14 +35,16 @@
 - 정상값·경계값·잘못된 값 테스트
 - Windows·Ubuntu CI 통과
 
-## 2. Collector 추상화와 Agent 연결
+## 2. Collector 추상화와 Agent 연결 (완료)
 
-- Collector DI 등록
-- 주기적 Snapshot 수집
-- 취소와 예외 격리
-- 구조화 로그
-- 테스트용 fake collector
-- 아직 서버 전송은 하지 않음
+완료일: 2026-07-27
+
+- Collector와 Worker DI 등록
+- 설정 가능한 간격의 주기적 Snapshot 수집
+- 호스트 취소 전달과 수집 예외 격리·재시도
+- Event ID 기반 구조화 로그
+- Fake Collector 기반 DI·재시도·취소·검증 테스트
+- 서버 전송은 포함하지 않음
 
 ## 3. Linux Collector MVP
 
@@ -88,4 +90,4 @@
 - 자동 테스트와 필요한 스모크 테스트
 - Windows·Ubuntu GitHub Actions 통과
 - `CURRENT_STATE.md`와 이 문서 갱신
-- 별도 브랜치, Draft PR, 승인 후 squash 병합
+- 별도 브랜치와 PR을 사용하고, 승인된 작업은 검증 후 자동으로 squash 병합·동기화
