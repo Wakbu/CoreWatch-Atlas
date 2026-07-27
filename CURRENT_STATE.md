@@ -14,16 +14,16 @@
 
 ## 현재 구현
 
-공통 계약, Agent 수집 오케스트레이션과 Linux Collector MVP를 완료했다.
+공통 계약, Agent 수집 오케스트레이션과 Windows·Linux Collector MVP를 완료했다.
 
 - `CoreWatch.Atlas.Contracts`: 비동기 수집 인터페이스와 플랫폼 독립 Snapshot 계약
-- `CoreWatch.Atlas.Agent`: 기본 15초 주기 수집, 취소 전달, 예외 격리·재시도, 구조화 로그
-- `CoreWatch.Atlas.Collectors.Linux`: CPU, 메모리, 파일 시스템, 디스크·네트워크 누적 I/O, 업타임과 장비 식별 수집
-- Linux Agent는 실제 Collector를 자동 선택하며 Windows는 Windows Collector 구현 전까지 미구성 오류를 명시적으로 보고
-- Linux 필수 `/proc` 오류는 전달하고 선택 컬렉션의 권한 제한·파일 누락은 안전하게 격리
-- 자동 테스트 24개: 계약 10, Agent 4, Linux 파서·Collector 10
-- Ubuntu 테스트는 실제 `/proc` Snapshot 수집을 검증
-- Windows Collector, Server/API, Web은 아직 생성하지 않음
+- `CoreWatch.Atlas.Agent`: 기본 15초 주기 수집, OS별 Collector 자동 선택, 취소 전달, 예외 격리·재시도, 구조화 로그
+- `CoreWatch.Atlas.Collectors.Linux`: `/proc` 기반 CPU, 메모리, 파일 시스템, 디스크·네트워크 누적 I/O, 업타임과 장비 식별
+- `CoreWatch.Atlas.Collectors.Windows`: Windows API 기반 CPU, 메모리, 고정 볼륨, 물리 디스크·네트워크 누적 I/O와 업타임
+- 필수 지표 오류는 전달하고 선택 장치의 권한·접근 오류는 안전하게 격리
+- 자동 테스트 30개: 계약 10, Agent 4, Linux 10, Windows 6
+- Ubuntu는 실제 `/proc`, Windows는 실제 시스템 API Snapshot을 CI에서 검증
+- Server/API, Web과 로컬 JSON·Prometheus 출력은 아직 생성하지 않음
 - 원격 명령 실행이나 시스템 변경 기능은 구현하지 않음
 
 ## 기술 기준
@@ -53,20 +53,18 @@ dotnet list CoreWatch.Atlas.sln package --deprecated --include-transitive
 마지막 검증 결과:
 
 - Windows 로컬 Debug/Release: 경고 0, 오류 0
-- MTP 테스트: 24/24 통과
+- MTP 테스트: 30/30 통과
 - 취약·Legacy 패키지: 없음
-- Windows Agent 스모크 및 임시 프로세스 정리 통과
-- GitHub-hosted Windows·Ubuntu CI 통과, Ubuntu에서 실제 Linux Snapshot 수집
+- Windows Release Agent가 실제 Snapshot을 연속 수집하며 정상 실행
+- GitHub-hosted Windows·Ubuntu CI 통과, 각 OS의 실제 Collector 통합 검증
 
 ## 완료된 주요 변경
 
-- PR #1: 초기 .NET 솔루션, Agent, Contracts, 테스트 골격
-- PR #2: .NET 10 LTS와 Microsoft Testing Platform 전환
-- PR #3: Windows·Ubuntu GitHub Actions CI 추가
-- PR #4: 새 채팅 인수인계를 위한 상태·작업 순서 문서 추가
-- PR #5: 공통 메트릭 계약과 불변 조건 테스트 구현
-- PR #6: Collector DI와 Agent 주기 수집·취소·예외 복구·구조화 로그 구현
-- Linux Collector MVP: `/proc` 파서, 오류 정책, Agent 연결, fixture와 Ubuntu 실환경 테스트
+- PR #1~#4: 초기 솔루션, .NET 10, Windows·Ubuntu CI, 인수인계 문서
+- PR #5: 공통 메트릭 계약과 불변 조건 테스트
+- PR #6: Collector DI와 Agent 주기 수집·취소·예외 복구·구조화 로그
+- PR #7: Linux Collector, Agent 연결, fixture와 Ubuntu 실환경 테스트
+- Windows Collector MVP: Win32·.NET 시스템 API 수집, Agent 연결, fixture와 Windows 실환경 테스트
 
 ## 제품·UI 결정
 
@@ -74,14 +72,14 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 
 ## 알려진 상태와 제한
 
-- Linux Agent는 실제 로컬 Snapshot을 수집하지만 아직 출력·서버 전송 기능이 없어 로그에는 수집 성공 이벤트만 남는다.
-- Windows에서는 실제 Collector가 없어 미구성 오류를 격리하고 재시도한다.
+- Windows·Linux Agent는 실제 Snapshot을 수집하지만 아직 JSON 출력·Prometheus endpoint·서버 전송 기능이 없어 로그에는 수집 성공 이벤트만 남는다.
+- Windows 장비 ID는 현재 호스트명 기반이며 서버 등록 단계에서 영구 ID 발급 방식으로 교체할 수 있다.
+- 권한이 없거나 성능 카운터를 제공하지 않는 물리 디스크는 Windows 디스크 I/O 컬렉션에서 제외될 수 있다.
 - Server/API와 Web UI, 릴리스·배포 패키지는 아직 없다.
-- 제한된 Linux 환경에서는 접근 불가능한 디스크·네트워크·마운트 지표가 빈 컬렉션일 수 있다.
 
 ## 다음 작업
 
-다음 구현 단계는 `docs/NEXT_STEPS.md`의 4단계인 Windows Collector MVP다. 시작 전 범위와 완료 조건을 설명하고 사용자 승인을 받는다.
+다음 구현 단계는 `docs/NEXT_STEPS.md`의 5단계인 Agent 로컬 JSON 출력과 선택적 Prometheus `/metrics`다. 시작 전 범위와 완료 조건을 설명하고 사용자 승인을 받는다.
 
 ## 관련 문서
 
@@ -89,5 +87,6 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - 메트릭 계약: `docs/METRICS_CONTRACT.md`
 - Agent 수집 루프: `docs/AGENT_COLLECTION.md`
 - Linux Collector: `docs/LINUX_COLLECTOR.md`
+- Windows Collector: `docs/WINDOWS_COLLECTOR.md`
 - 다음 작업: `docs/NEXT_STEPS.md`
 - 작업 규칙: `AGENTS.md`

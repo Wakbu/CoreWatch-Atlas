@@ -18,19 +18,20 @@ Collector DI, 설정 가능한 수집 주기, 취소 전달, 오류 격리·재�
 
 완료일: 2026-07-27
 
-- `/proc/stat`, `/proc/meminfo`, `/proc/diskstats`, `/proc/net/dev`, `/proc/uptime` 파서
-- 접근 가능한 Linux 파일 시스템 용량과 안정적인 장비 식별자
-- CPU 누적 카운터 차이 계산과 누적 I/O 바이트 변환
-- 필수 파일 오류 전달, 선택 지표 권한·파일 누락 격리, 취소 지원
-- Windows·Linux 공용 fixture 테스트와 Ubuntu 실제 `/proc` 통합 테스트
-- Linux Agent의 실제 Collector 자동 선택
+- `/proc` 기반 CPU, 메모리, 디스크·네트워크 누적 I/O와 업타임
+- 접근 가능한 파일 시스템과 Linux 장비 식별
+- fixture 및 Ubuntu 실제 `/proc` 통합 테스트
 
-## 4. Windows Collector MVP
+## 4. Windows Collector MVP (완료)
 
-- CPU, 메모리, 고정 디스크, 네트워크, 업타임
-- Windows 종속 코드는 Collector 프로젝트로 격리
-- 기존 CoreWatch 코드 직접 참조 금지
-- Windows CI에서 실제 수집 통합 검증
+완료일: 2026-07-27
+
+- Windows API 기반 CPU, 메모리와 업타임
+- 고정 볼륨 용량, 물리 디스크·네트워크 누적 I/O
+- Windows 종속 코드를 독립 Collector 프로젝트로 격리
+- 기존 CoreWatch 코드 직접 참조 없음
+- fixture 및 Windows 실제 API 통합 테스트
+- Windows Agent의 실제 Collector 자동 선택
 
 ## 5. Agent 로컬 출력과 Prometheus 형식
 

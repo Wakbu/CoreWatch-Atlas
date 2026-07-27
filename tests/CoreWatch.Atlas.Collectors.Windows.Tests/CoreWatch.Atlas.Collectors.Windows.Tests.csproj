@@ -1,0 +1,10 @@
+<Project Sdk="MSTest.Sdk/4.3.2">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CoreWatch.Atlas.Collectors.Windows\CoreWatch.Atlas.Collectors.Windows.csproj" />
+  </ItemGroup>
+</Project>
