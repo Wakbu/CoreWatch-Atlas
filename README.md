@@ -9,6 +9,12 @@ CoreWatch-Atlas는 Windows와 Linux 장비의 상태를 한곳에서 확인하�
 - .NET SDK 10.0.302 이상(10.0.3xx feature band)
 - Windows 또는 Linux
 
+## 프로젝트 상태
+
+- [현재 구현 및 인수인계](CURRENT_STATE.md)
+- [다음 작업 순서](docs/NEXT_STEPS.md)
+- [전체 전환 설계](docs/COREWATCH_ATLAS_DESIGN.md)
+
 ## 제품 구분
 
 - **CoreWatch**: 단일 Windows PC를 위한 WPF 기반 로컬 진단·벤치마크·최적화 앱
