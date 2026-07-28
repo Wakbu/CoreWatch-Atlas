@@ -43,6 +43,9 @@ public sealed class ServerApiTests
         StringAssert.Contains(stylesheetText, ".backdrop{display:none}");
         StringAssert.Contains(stylesheetText, "--bg:#f5f6f8");
         Assert.IsTrue(script.Content.Headers.ContentType?.MediaType?.Contains("javascript"));
+        StringAssert.Contains(
+            await script.Content.ReadAsStringAsync(),
+            "POLL_INTERVAL_MS=15_000");
     }
 
     [TestMethod]
