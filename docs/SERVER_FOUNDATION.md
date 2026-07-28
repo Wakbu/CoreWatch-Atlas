@@ -27,7 +27,7 @@ dotnet run --project src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj -c
 dotnet run --project src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj -c Release -- --create-operator observer --role Viewer
 ```
 
-역할 기본값은 `Administrator`이며 `Viewer`를 선택할 수 있다. 사용자 이름은 영문·숫자와 `._-`로 구성한 3~64자, 비밀번호는 12~128자다. 비밀번호는 화면에 표시하지 않는 대화형 입력으로 두 번 확인하며 DB에는 ASP.NET Core PasswordHasher의 PBKDF2 해시만 저장한다.
+역할 기본값은 `Administrator`이며 `Viewer`를 선택할 수 있다. 사용자 이름은 영문·숫자와 `._-`로 구성한 3~64자, 비밀번호는 12~128자다. 비밀번호는 화면에 표시하지 않는 대화형 입력으로 두 번 확인한다. 길이 정책을 충족하지 못하거나 확인 입력이 일치하지 않으면 프로세스를 종료하지 않고 다시 입력받으며, DB에는 ASP.NET Core PasswordHasher의 PBKDF2 해시만 저장한다.
 
 로그인은 기본 30분 sliding session 쿠키를 사용한다. 5회 연속 실패하면 15분 잠그며 세 값은 `Atlas:OperatorAuthentication`에서 허용 범위 안으로 조정할 수 있다.
 

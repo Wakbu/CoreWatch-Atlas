@@ -123,13 +123,7 @@ if (createRegistrationToken)
 
 if (createOperatorUsername is not null)
 {
-    var password = ReadPassword("Password: ");
-    var confirmation = ReadPassword("Confirm password: ");
-    if (!string.Equals(password, confirmation, StringComparison.Ordinal))
-    {
-        throw new InvalidOperationException("Password confirmation does not match.");
-    }
-
+    var password = ReadConfirmedPassword();
     var created = await database.CreateOperatorAsync(
         createOperatorUsername,
         password,
@@ -584,6 +578,30 @@ static string ReadPassword(string prompt)
         {
             value.Add(key.KeyChar);
         }
+    }
+}
+
+static string ReadConfirmedPassword()
+{
+    while (true)
+    {
+        var password = ReadPassword("Password: ");
+        if (password.Length is < 12 or > 128)
+        {
+            Console.Error.WriteLine(
+                "Password must contain between 12 and 128 characters. Try again.");
+            continue;
+        }
+
+        var confirmation = ReadPassword("Confirm password: ");
+        if (!string.Equals(password, confirmation, StringComparison.Ordinal))
+        {
+            Console.Error.WriteLine(
+                "Password confirmation does not match. Try again.");
+            continue;
+        }
+
+        return password;
     }
 }
 
