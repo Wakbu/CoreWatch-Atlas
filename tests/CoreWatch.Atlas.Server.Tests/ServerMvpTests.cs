@@ -193,6 +193,16 @@ public sealed class ServerMvpTests
                 "x64",
                 "0.1.0"));
         response.EnsureSuccessStatusCode();
+        await database.CreateOperatorAsync(
+            "mvp-viewer",
+            "Atlas-mvp-test-password!",
+            OperatorRoles.Viewer);
+        var login = await client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new OperatorLoginRequest(
+                "mvp-viewer",
+                "Atlas-mvp-test-password!"));
+        login.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<RegisteredAgent>())!;
     }
 

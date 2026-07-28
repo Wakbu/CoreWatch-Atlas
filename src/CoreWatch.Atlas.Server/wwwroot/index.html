@@ -10,7 +10,19 @@
 </head>
 <body>
   <a class="skip" href="#main">본문으로 이동</a>
-  <div class="shell" id="shell">
+  <section class="login-screen" id="loginScreen" aria-labelledby="loginTitle">
+    <form class="login-card" id="loginForm">
+      <div class="login-brand" aria-hidden="true">A</div>
+      <small>INFRASTRUCTURE OBSERVABILITY</small>
+      <h1 id="loginTitle">CoreWatch-Atlas 로그인</h1>
+      <p>허가된 운영자 계정으로 로그인하세요.</p>
+      <label>사용자 이름<input id="loginUsername" name="username" autocomplete="username" required minlength="3" maxlength="64"></label>
+      <label>비밀번호<input id="loginPassword" name="password" type="password" autocomplete="current-password" required minlength="12" maxlength="128"></label>
+      <p class="login-error" id="loginError" role="alert"></p>
+      <button class="primary" id="loginButton" type="submit">로그인</button>
+    </form>
+  </section>
+  <div class="shell auth-pending" id="shell">
     <aside id="sidebar">
       <header class="brand"><b>A</b><span><strong>CoreWatch</strong><small>ATLAS</small></span><button id="collapse" aria-label="메뉴 접기">‹</button></header>
       <nav aria-label="주요 기능">
@@ -28,7 +40,7 @@
       <header class="topbar">
         <button class="mobile-menu" id="mobileMenu" aria-label="메뉴 열기">☰</button>
         <div><small>INFRASTRUCTURE OBSERVABILITY</small><h1 id="title">통합 대시보드</h1></div>
-        <div class="actions"><label class="search">⌕<input id="search" type="search" placeholder="서버 검색" aria-label="서버 검색"></label><button id="refresh">↻ <span>새로고침</span></button></div>
+        <div class="actions"><label class="search">⌕<input id="search" type="search" placeholder="서버 검색" aria-label="서버 검색"></label><span class="operator" id="operator"></span><button id="logout" type="button">로그아웃</button><button id="refresh">↻ <span>새로고침</span></button></div>
       </header>
       <main id="main" tabindex="-1"><section id="content" aria-live="polite"><div class="state"><i class="spinner"></i><strong>등록 서버를 불러오는 중입니다</strong></div></section></main>
     </section>

@@ -9,18 +9,31 @@
 
 자격 증명은 `POST /api/v1/agents/{agentId}/credentials/rotate`로 교체하고 `DELETE /api/v1/agents/{agentId}/credentials`로 폐기한다. 두 요청 모두 현재 자격 증명이 필요하다. 실패 인증, 교체와 폐기 이벤트는 비밀값 없이 `authentication_audit`에 기록한다.
 
+## 운영자 인증과 권한
+
+Web은 HttpOnly·SameSite 쿠키로 로그인한다. Agent Bearer 인증과 운영자 인증은 서로 분리된다.
+
+| 메서드와 경로 | 권한 | 용도 |
+|---|---|---|
+| `POST /api/v1/auth/login` | 익명 | 운영자 로그인 |
+| `GET /api/v1/auth/me` | Viewer·Administrator | 현재 세션 |
+| `POST /api/v1/auth/logout` | Viewer·Administrator | 로그아웃 |
+| `GET /api/v1/operators` | Administrator | 비밀번호 해시를 제외한 운영자 목록 |
+
+공개 회원가입과 HTTP 계정 생성 API는 없다. 계정은 Server 로컬 CLI에서 생성한다. 로그인 성공·실패·잠금과 로그아웃은 비밀값 없이 감사 테이블에 기록한다.
+
 ## Snapshot API
 
 | 메서드와 경로 | 인증 | 용도 |
 |---|---|---|
 | `POST /api/v1/agents/{agentId}/snapshots` | Agent Bearer | Snapshot 수신 |
-| `GET /api/v1/agents` | 없음 | 전체 장비·최신 상태 |
-| `GET /api/v1/agents/{agentId}` | 없음 | 장비 하나의 최신 상태 |
-| `GET /api/v1/agents/{agentId}/snapshots` | 없음 | 기간별 이력 |
+| `GET /api/v1/agents` | Viewer·Administrator | 전체 장비·최신 상태 |
+| `GET /api/v1/agents/{agentId}` | Viewer·Administrator | 장비 하나의 최신 상태 |
+| `GET /api/v1/agents/{agentId}/snapshots` | Viewer·Administrator | 기간별 이력 |
 
 이력 조회는 `fromUtc`, `toUtc`, `limit`을 지원한다. 기본 범위는 최근 24시간, 기본 제한은 200개이며 최대 1,000개다. 온라인 상태는 마지막 수신 시각이 `Atlas:ServerApi:OfflineAfterSeconds` 이내인지로 계산한다.
 
-현재 조회 API에는 운영자·사용자 인증이 없다. Web 인증이 구현되기 전에는 loopback 또는 신뢰된 사설망에서만 Server를 운영해야 한다.
+아직 HTTPS가 구현되지 않았으므로 loopback 또는 신뢰된 사설망에서만 Server를 운영해야 한다.
 
 ## 보존 설정
 

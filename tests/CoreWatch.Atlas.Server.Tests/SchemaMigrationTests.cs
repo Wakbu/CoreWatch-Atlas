@@ -37,7 +37,9 @@ public sealed class SchemaMigrationTests
             },
             columns);
         CollectionAssert.Contains(tables, "authentication_audit");
-        Assert.AreEqual(3L, (long)(await versionCommand.ExecuteScalarAsync())!);
+        CollectionAssert.Contains(tables, "atlas_operators");
+        CollectionAssert.Contains(tables, "operator_authentication_audit");
+        Assert.AreEqual(4L, (long)(await versionCommand.ExecuteScalarAsync())!);
     }
 
     private static async Task<string[]> ReadNamesAsync(

@@ -23,14 +23,17 @@ Windows·Linux Agent가 실제 지표를 인증된 중앙 Server로 전송하고
 - 기본 활성화된 camelCase 한 줄 JSON 표준 출력
 - 선택적 Kestrel Prometheus `/metrics`, 기본 `127.0.0.1:9464`·비활성화
 - Counter·제한 label·escape·64비트 정수 정밀도 정책
-- ASP.NET Core Server, SQLite 스키마 v3와 v2→v3 멱등 업그레이드
+- ASP.NET Core Server, SQLite 스키마 v4와 기존 DB 멱등 업그레이드
 - `/health/live`, `/health/ready`, `/api/v1/status`
 - 로컬 CLI 일회성 등록 토큰, SHA-256 해시 저장, UUIDv7 영구 Agent ID
 - `POST /api/v1/agents/register`, 토큰 만료·1회 소비와 입력 검증
 - Agent 자격 증명 해시 저장, Bearer 인증, 교체·폐기와 인증 감사
 - Agent Snapshot 전송, 최신·기간별 조회, 온라인 판정과 보존 정리
+- 로컬 CLI 운영자 생성, PBKDF2 비밀번호 해시와 로그인 실패 잠금
+- `Viewer`·`Administrator` 역할, 쿠키 로그인·로그아웃과 인증 감사
+- 대시보드·조회 API 운영자 인증과 관리자 전용 운영자 목록
 - Server와 함께 제공되는 반응형 Web 대시보드, 검색·파생 경고·이벤트·상세 차트
-- 자동 테스트 56개: 계약 10, Agent 15, Linux 10, Windows 6, Server 15
+- 자동 테스트 60개: 계약 10, Agent 15, Linux 10, Windows 6, Server 19
 - 원격 명령 실행이나 시스템 변경 기능 없음
 
 ## 기술·검증 기준
@@ -42,7 +45,7 @@ Windows·Linux Agent가 실제 지표를 인증된 중앙 Server로 전송하고
 마지막 검증:
 
 - Windows 로컬 Debug/Release 경고 0·오류 0
-- 테스트 56/56 통과
+- 테스트 60/60 통과
 - 취약·deprecated 패키지 없음
 - Release Agent JSON 한 줄 출력 확인
 - 활성화된 `/metrics` HTTP 200·Prometheus 내용 확인
@@ -60,6 +63,7 @@ Windows·Linux Agent가 실제 지표를 인증된 중앙 Server로 전송하고
 - 일회성 등록 토큰과 영구 Agent ID 발급
 - Agent 자격 증명과 Server/API MVP
 - 반응형 Web 대시보드 MVP
+- 운영 보안 8A: 운영자 로그인과 Viewer·Administrator 조회 권한
 
 ## 제품·UI 결정
 
@@ -67,14 +71,16 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 
 ## 알려진 제한
 
-- 조회 API에는 아직 운영자·사용자 인증이 없으므로 신뢰된 사설망 또는 loopback에서만 운영해야 한다.
+- HTTPS가 아직 없으므로 운영 인터넷에 직접 공개하지 않고 loopback 또는 신뢰된 사설망에서 운영해야 한다.
+- 운영자 계정 생성은 현재 Server 로컬 CLI만 지원하며 MFA와 계정 수명주기 UI는 없다.
+- 운영자 쿠키 Data Protection 키의 운영용 영구·보호 저장은 다음 비밀정보 관리 단계에서 구현한다.
 - Prometheus endpoint에는 아직 인증·TLS가 없으므로 기본 loopback을 유지하거나 사설망·방화벽으로 보호해야 한다.
 - Agent 등록 정보와 자격 증명은 아직 자동 영구 저장되지 않으므로 운영자가 환경 변수나 별도 비밀 저장소로 주입해야 한다.
 - 정식 Release와 설치·서비스 패키지는 없다.
 
 ## 다음 작업
 
-다음 구현은 `docs/NEXT_STEPS.md`의 8단계 운영 보안과 배포다. 운영자 로그인·권한·HTTPS를 먼저 설계하고 별도 승인 후 진행한다.
+다음 구현은 `docs/NEXT_STEPS.md`의 8B다. HTTPS 강제와 Server·Agent 비밀정보 저장을 설계·구현한다.
 
 ## 관련 문서
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CoreWatch.Atlas.Server.Tests;
 
@@ -46,15 +47,16 @@ public sealed class ServerApiTests
     {
         using var fixture = new ServerFixture();
         using var client = fixture.CreateClient();
+        await AuthenticateAsync(fixture, client);
 
         var ready = await client.GetFromJsonAsync<JsonElement>("/health/ready");
         var status = await client.GetFromJsonAsync<JsonElement>("/api/v1/status");
 
         Assert.AreEqual("ready", ready.GetProperty("status").GetString());
-        Assert.AreEqual(3, ready.GetProperty("schemaVersion").GetInt32());
+        Assert.AreEqual(4, ready.GetProperty("schemaVersion").GetInt32());
         Assert.AreEqual("CoreWatch-Atlas.Server", status.GetProperty("service").GetString());
         Assert.AreEqual(
-            3,
+            4,
             status.GetProperty("storage").GetProperty("schemaVersion").GetInt32());
     }
 
@@ -77,7 +79,7 @@ public sealed class ServerApiTests
             "SELECT name FROM sqlite_master WHERE type = 'index';");
 
         CollectionAssert.IsSubsetOf(
-            new[] { "schema_migrations", "agents", "snapshots", "registration_tokens", "authentication_audit" },
+            new[] { "schema_migrations", "agents", "snapshots", "registration_tokens", "authentication_audit", "atlas_operators", "operator_authentication_audit" },
             tables);
         CollectionAssert.Contains(indexes, "ix_snapshots_agent_captured_at");
     }
@@ -98,7 +100,24 @@ public sealed class ServerApiTests
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM schema_migrations;";
 
-        Assert.AreEqual(3L, (long)(await command.ExecuteScalarAsync())!);
+        Assert.AreEqual(4L, (long)(await command.ExecuteScalarAsync())!);
+    }
+
+    private static async Task AuthenticateAsync(
+        ServerFixture fixture,
+        HttpClient client)
+    {
+        var database = fixture.Services.GetRequiredService<AtlasDatabase>();
+        await database.CreateOperatorAsync(
+            "server-test-admin",
+            "Atlas-server-test-password!",
+            OperatorRoles.Administrator);
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new OperatorLoginRequest(
+                "server-test-admin",
+                "Atlas-server-test-password!"));
+        response.EnsureSuccessStatusCode();
     }
 
     private static async Task<string[]> ReadNamesAsync(
