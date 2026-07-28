@@ -1,0 +1,16 @@
+namespace CoreWatch.Atlas.Server;
+
+public sealed record AgentRegistrationRequest(
+    string RegistrationToken,
+    string HostName,
+    string OperatingSystem,
+    string Architecture,
+    string AgentVersion);
+
+public sealed record RegisteredAgent(
+    Guid AgentId,
+    DateTimeOffset RegisteredAtUtc);
+
+public sealed record IssuedRegistrationToken(
+    string Value,
+    DateTimeOffset ExpiresAtUtc);
