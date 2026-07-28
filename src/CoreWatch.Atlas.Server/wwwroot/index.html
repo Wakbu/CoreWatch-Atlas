@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <title>CoreWatch-Atlas</title>
+  <link rel="stylesheet" href="/css/atlas.css">
+  <script src="/js/atlas.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">본문으로 이동</a>
+  <div class="shell" id="shell">
+    <aside id="sidebar">
+      <header class="brand"><b>A</b><span><strong>CoreWatch</strong><small>ATLAS</small></span><button id="collapse" aria-label="메뉴 접기">‹</button></header>
+      <nav aria-label="주요 기능">
+        <a class="nav active" href="#/" data-view="dashboard"><i>⌂</i><span>대시보드</span></a>
+        <a class="nav" href="#/servers" data-view="servers"><i>▦</i><span>서버</span></a>
+        <a class="nav" href="#/alerts" data-view="alerts"><i>!</i><span>경고</span><em id="alertCount">0</em></a>
+        <a class="nav" href="#/history" data-view="history"><i>↻</i><span>이력</span></a>
+        <a class="nav" href="#/prometheus" data-view="prometheus"><i>P</i><span>Prometheus</span></a>
+        <a class="nav" href="#/settings" data-view="settings"><i>⚙</i><span>설정</span></a>
+      </nav>
+      <footer><i id="connection"></i><span><strong id="connectionText">연결 확인 중</strong><small>Atlas Server</small></span></footer>
+    </aside>
+    <div class="backdrop" id="backdrop"></div>
+    <section class="workspace">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" aria-label="메뉴 열기">☰</button>
+        <div><small>INFRASTRUCTURE OBSERVABILITY</small><h1 id="title">통합 대시보드</h1></div>
+        <div class="actions"><label class="search">⌕<input id="search" type="search" placeholder="서버 검색" aria-label="서버 검색"></label><button id="refresh">↻ <span>새로고침</span></button></div>
+      </header>
+      <main id="main" tabindex="-1"><section id="content" aria-live="polite"><div class="state"><i class="spinner"></i><strong>등록 서버를 불러오는 중입니다</strong></div></section></main>
+    </section>
+  </div>
+</body>
+</html>

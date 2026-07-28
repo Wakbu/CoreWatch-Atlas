@@ -61,6 +61,9 @@ if (createRegistrationToken)
     return;
 }
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapGet(
     "/health/live",
     () => Results.Ok(new { status = "ok" }));

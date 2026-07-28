@@ -14,7 +14,7 @@
 
 ## 현재 구현
 
-Windows·Linux Agent가 실제 지표를 수집해 인증된 중앙 Server로 전송하고, Server API에서 여러 장비의 최신 상태와 이력을 조회할 수 있는 단계다.
+Windows·Linux Agent가 실제 지표를 인증된 중앙 Server로 전송하고, 반응형 Web 대시보드에서 여러 장비의 최신 상태와 최근 24시간 이력을 확인할 수 있는 단계다.
 
 - 플랫폼 독립 불변 Snapshot 계약
 - 15초 기본 주기, OS별 Collector 자동 선택, 취소·오류 격리·재시도
@@ -29,7 +29,8 @@ Windows·Linux Agent가 실제 지표를 수집해 인증된 중앙 Server로 �
 - `POST /api/v1/agents/register`, 토큰 만료·1회 소비와 입력 검증
 - Agent 자격 증명 해시 저장, Bearer 인증, 교체·폐기와 인증 감사
 - Agent Snapshot 전송, 최신·기간별 조회, 온라인 판정과 보존 정리
-- 자동 테스트 55개: 계약 10, Agent 15, Linux 10, Windows 6, Server 14
+- Server와 함께 제공되는 반응형 Web 대시보드, 검색·파생 경고·이벤트·상세 차트
+- 자동 테스트 56개: 계약 10, Agent 15, Linux 10, Windows 6, Server 15
 - 원격 명령 실행이나 시스템 변경 기능 없음
 
 ## 기술·검증 기준
@@ -41,7 +42,7 @@ Windows·Linux Agent가 실제 지표를 수집해 인증된 중앙 Server로 �
 마지막 검증:
 
 - Windows 로컬 Debug/Release 경고 0·오류 0
-- 테스트 55/55 통과
+- 테스트 56/56 통과
 - 취약·deprecated 패키지 없음
 - Release Agent JSON 한 줄 출력 확인
 - 활성화된 `/metrics` HTTP 200·Prometheus 내용 확인
@@ -58,6 +59,7 @@ Windows·Linux Agent가 실제 지표를 수집해 인증된 중앙 Server로 �
 - Server 기반, SQLite 스키마와 상태 API
 - 일회성 등록 토큰과 영구 Agent ID 발급
 - Agent 자격 증명과 Server/API MVP
+- 반응형 Web 대시보드 MVP
 
 ## 제품·UI 결정
 
@@ -72,7 +74,7 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 
 ## 다음 작업
 
-다음 구현은 `docs/NEXT_STEPS.md`의 7단계 Web MVP다. 확정된 대시보드 설계를 기준으로 서버 목록·상세 차트·경고·이력 화면을 별도 승인 후 진행한다.
+다음 구현은 `docs/NEXT_STEPS.md`의 8단계 운영 보안과 배포다. 운영자 로그인·권한·HTTPS를 먼저 설계하고 별도 승인 후 진행한다.
 
 ## 관련 문서
 
@@ -84,4 +86,5 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - Server 기반: `docs/SERVER_FOUNDATION.md`
 - Server/API MVP: `docs/SERVER_API_MVP.md`
 - Web 대시보드 설계: `docs/WEB_DASHBOARD_DESIGN.md`
+- Web 대시보드 MVP: `docs/WEB_DASHBOARD_MVP.md`
 - 다음 작업: `docs/NEXT_STEPS.md`
