@@ -2,7 +2,7 @@
 
 CoreWatch-Atlas는 Windows와 Linux 장비의 상태를 한곳에서 확인하기 위한 크로스플랫폼 시스템 모니터링 플랫폼입니다.
 
-> 현재 Agent 로컬 모니터링까지 구현됐으며 정식 배포 패키지는 아직 없습니다.
+> 현재 Agent 로컬 모니터링과 중앙 Server 기반까지 구현됐으며 정식 배포 패키지는 아직 없습니다.
 
 ## 현재 기능
 
@@ -10,6 +10,7 @@ CoreWatch-Atlas는 Windows와 Linux 장비의 상태를 한곳에서 확인하�
 - camelCase 한 줄 JSON Snapshot 출력
 - 선택적 Prometheus 호환 `/metrics`
 - 읽기 전용 동작과 수집·출력 오류 격리
+- ASP.NET Core 중앙 서버, SQLite 스키마와 상태 API
 
 [현재 구현 및 인수인계](CURRENT_STATE.md) · [다음 작업](docs/NEXT_STEPS.md) · [전체 설계](docs/COREWATCH_ATLAS_DESIGN.md)
 
@@ -25,6 +26,14 @@ dotnet run --project src/CoreWatch.Atlas.Agent/CoreWatch.Atlas.Agent.csproj -c R
 ```
 
 기본 설정은 15초마다 JSON Snapshot을 출력하며 Prometheus endpoint는 비활성화돼 있습니다. `/metrics` 활성화와 지표 목록은 [로컬 출력 문서](docs/LOCAL_OUTPUT.md)를 참고하세요.
+
+중앙 서버 기반은 다음 명령으로 실행합니다.
+
+```shell
+dotnet run --project src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj -c Release
+```
+
+현재 상태 API와 SQLite 초기 스키마까지만 제공하며 장비 등록·인증과 Snapshot 수신은 다음 단계입니다. 자세한 내용은 [서버 기반 문서](docs/SERVER_FOUNDATION.md)를 참고하세요.
 
 ## 제품 구분
 
@@ -47,7 +56,7 @@ Prometheus  ─ 선택적 연동 ────────────┘
 
 1. 저장소와 공통 빌드 구조: 완료
 2. Windows/Linux Agent와 로컬 출력: 완료
-3. 중앙 Server/API: 다음 단계
+3. 중앙 Server/API 기반과 SQLite: 완료
 4. 웹 대시보드
 5. 서비스 설치, 인증과 Docker 배포
 6. `1.0.0` 안정화

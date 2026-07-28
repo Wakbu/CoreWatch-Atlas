@@ -37,12 +37,28 @@ Windows API 기반 기본 지표와 Windows 실환경 검증을 구현했다.
 - label escape와 64비트 정수 정밀도
 - 수집과 출력 오류 격리
 
-## 6. Server/API MVP
+## 6A. Server 기반과 SQLite (완료)
 
-- 장비 등록과 인증
-- Snapshot 수신
+완료일: 2026-07-28
+
+- ASP.NET Core 서버 실행 기반
+- SQLite 스키마 v1과 멱등 초기화
+- 생존·준비 상태와 서비스 상태 API
+- 상태 API·스키마 통합 테스트
+
+## 6B. 장비 등록과 인증
+
+- 영구 Agent ID 발급
+- 등록용 일회성 토큰과 Agent 자격 증명
+- 자격 증명 해시 저장·폐기·교체
+- 등록·인증 API와 실패 감사 로그
+
+## 6C. Snapshot 수신과 조회
+
+- 인증된 Snapshot 수신
 - 최신 상태와 SQLite 이력
 - 온라인·오프라인 판정
+- 보존 기간과 정리 작업
 
 ## 7. Web MVP
 
@@ -50,6 +66,7 @@ Windows API 기반 기본 지표와 Windows 실환경 검증을 구현했다.
 - 장비별 CPU·메모리·디스크·네트워크 차트
 - 기간별 이력과 반응형 UI
 - 기존 CoreWatch 개인 사용자판을 참고한 Atlas 전용 웹 디자인 시스템
+- 확정된 첫 화면과 내비게이션은 `WEB_DASHBOARD_DESIGN.md`를 기준으로 구현
 
 ## 공통 완료 규칙
 
