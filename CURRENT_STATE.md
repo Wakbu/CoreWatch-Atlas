@@ -14,7 +14,7 @@
 
 ## 현재 구현
 
-Windows·Linux Agent가 실제 지표를 수집하고, 중앙 Server가 SQLite 저장소·상태 API와 일회성 토큰 기반 장비 등록을 제공하는 단계다.
+Windows·Linux Agent가 실제 지표를 수집해 인증된 중앙 Server로 전송하고, Server API에서 여러 장비의 최신 상태와 이력을 조회할 수 있는 단계다.
 
 - 플랫폼 독립 불변 Snapshot 계약
 - 15초 기본 주기, OS별 Collector 자동 선택, 취소·오류 격리·재시도
@@ -23,11 +23,13 @@ Windows·Linux Agent가 실제 지표를 수집하고, 중앙 Server가 SQLite �
 - 기본 활성화된 camelCase 한 줄 JSON 표준 출력
 - 선택적 Kestrel Prometheus `/metrics`, 기본 `127.0.0.1:9464`·비활성화
 - Counter·제한 label·escape·64비트 정수 정밀도 정책
-- ASP.NET Core Server, SQLite 스키마 v2와 멱등 초기화
+- ASP.NET Core Server, SQLite 스키마 v3와 v2→v3 멱등 업그레이드
 - `/health/live`, `/health/ready`, `/api/v1/status`
 - 로컬 CLI 일회성 등록 토큰, SHA-256 해시 저장, UUIDv7 영구 Agent ID
 - `POST /api/v1/agents/register`, 토큰 만료·1회 소비와 입력 검증
-- 자동 테스트 46개: 계약 10, Agent 11, Linux 10, Windows 6, Server 9
+- Agent 자격 증명 해시 저장, Bearer 인증, 교체·폐기와 인증 감사
+- Agent Snapshot 전송, 최신·기간별 조회, 온라인 판정과 보존 정리
+- 자동 테스트 55개: 계약 10, Agent 15, Linux 10, Windows 6, Server 14
 - 원격 명령 실행이나 시스템 변경 기능 없음
 
 ## 기술·검증 기준
@@ -39,7 +41,7 @@ Windows·Linux Agent가 실제 지표를 수집하고, 중앙 Server가 SQLite �
 마지막 검증:
 
 - Windows 로컬 Debug/Release 경고 0·오류 0
-- 테스트 46/46 통과
+- 테스트 55/55 통과
 - 취약·deprecated 패키지 없음
 - Release Agent JSON 한 줄 출력 확인
 - 활성화된 `/metrics` HTTP 200·Prometheus 내용 확인
@@ -55,6 +57,7 @@ Windows·Linux Agent가 실제 지표를 수집하고, 중앙 Server가 SQLite �
 - Agent JSON 출력과 선택적 Prometheus exposition
 - Server 기반, SQLite 스키마와 상태 API
 - 일회성 등록 토큰과 영구 Agent ID 발급
+- Agent 자격 증명과 Server/API MVP
 
 ## 제품·UI 결정
 
@@ -62,14 +65,14 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 
 ## 알려진 제한
 
-- Server는 장비 등록까지 가능하지만 Agent 자격 증명 인증과 Snapshot 수신·조회가 없어 통합 조회는 아직 불가능하다.
+- 조회 API에는 아직 운영자·사용자 인증이 없으므로 신뢰된 사설망 또는 loopback에서만 운영해야 한다.
 - Prometheus endpoint에는 아직 인증·TLS가 없으므로 기본 loopback을 유지하거나 사설망·방화벽으로 보호해야 한다.
-- Server는 UUIDv7 영구 ID를 발급하지만 Agent가 아직 등록 API·자격 증명과 연결되지 않아 로컬 Snapshot의 장비 ID는 호스트명 기반이다.
+- Agent 등록 정보와 자격 증명은 아직 자동 영구 저장되지 않으므로 운영자가 환경 변수나 별도 비밀 저장소로 주입해야 한다.
 - 정식 Release와 설치·서비스 패키지는 없다.
 
 ## 다음 작업
 
-다음 구현은 `docs/NEXT_STEPS.md`의 6B-2 단계다. Agent 자격 증명 발급·해시 저장, 요청 인증과 자격 증명 교체·폐기를 별도 승인 후 진행한다. Snapshot 수신·조회와 온라인 판정은 6C로 분리한다.
+다음 구현은 `docs/NEXT_STEPS.md`의 7단계 Web MVP다. 확정된 대시보드 설계를 기준으로 서버 목록·상세 차트·경고·이력 화면을 별도 승인 후 진행한다.
 
 ## 관련 문서
 
@@ -79,5 +82,6 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - Linux Collector: `docs/LINUX_COLLECTOR.md`
 - Windows Collector: `docs/WINDOWS_COLLECTOR.md`
 - Server 기반: `docs/SERVER_FOUNDATION.md`
+- Server/API MVP: `docs/SERVER_API_MVP.md`
 - Web 대시보드 설계: `docs/WEB_DASHBOARD_DESIGN.md`
 - 다음 작업: `docs/NEXT_STEPS.md`

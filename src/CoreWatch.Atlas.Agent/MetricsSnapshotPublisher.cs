@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CoreWatch.Atlas.Contracts;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace CoreWatch.Atlas.Agent;
@@ -12,11 +13,15 @@ public sealed class MetricsSnapshotPublisher
     private readonly LatestMetricsSnapshotStore store;
     private readonly TextWriter output;
     private readonly bool jsonEnabled;
+    private readonly AtlasServerClient? serverClient;
+    private readonly ILogger<MetricsSnapshotPublisher> logger;
 
     public MetricsSnapshotPublisher(
         LatestMetricsSnapshotStore store,
         TextWriter output,
-        IOptions<LocalOutputOptions> options)
+        IOptions<LocalOutputOptions> options,
+        AtlasServerClient? serverClient = null,
+        ILogger<MetricsSnapshotPublisher>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(output);
@@ -24,6 +29,8 @@ public sealed class MetricsSnapshotPublisher
 
         this.store = store;
         this.output = output;
+        this.serverClient = serverClient;
+        this.logger = logger ?? NullLogger<MetricsSnapshotPublisher>.Instance;
         jsonEnabled = options.Value.JsonEnabled;
     }
 
@@ -32,6 +39,22 @@ public sealed class MetricsSnapshotPublisher
         CancellationToken cancellationToken)
     {
         store.Update(snapshot);
+        if (serverClient is not null)
+        {
+            try
+            {
+                await serverClient.SendAsync(snapshot, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                MetricsCollectionLog.ServerTransmissionFailed(logger, exception);
+            }
+        }
+
         if (!jsonEnabled)
         {
             return;

@@ -7,9 +7,9 @@ using Microsoft.Extensions.Options;
 
 namespace CoreWatch.Atlas.Server;
 
-public sealed class AtlasDatabase
+public sealed partial class AtlasDatabase
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     private readonly string _connectionString;
     private readonly TimeProvider _timeProvider;
@@ -92,7 +92,10 @@ public sealed class AtlasDatabase
                     architecture TEXT NOT NULL,
                     agent_version TEXT NOT NULL,
                     registered_at_utc TEXT NOT NULL,
-                    last_seen_at_utc TEXT NULL
+                    last_seen_at_utc TEXT NULL,
+                    credential_hash BLOB NULL,
+                    credential_created_at_utc TEXT NULL,
+                    credential_revoked_at_utc TEXT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS snapshots (
@@ -126,6 +129,44 @@ public sealed class AtlasDatabase
                 """,
                 cancellationToken,
                 transaction);
+            await EnsureColumnAsync(
+                connection,
+                transaction,
+                "credential_hash",
+                "BLOB NULL",
+                cancellationToken);
+            await EnsureColumnAsync(
+                connection,
+                transaction,
+                "credential_created_at_utc",
+                "TEXT NULL",
+                cancellationToken);
+            await EnsureColumnAsync(
+                connection,
+                transaction,
+                "credential_revoked_at_utc",
+                "TEXT NULL",
+                cancellationToken);
+            await ExecuteNonQueryAsync(
+                connection,
+                """
+                CREATE TABLE IF NOT EXISTS authentication_audit (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_id TEXT NULL,
+                    occurred_at_utc TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    remote_address TEXT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS ix_authentication_audit_agent_time
+                    ON authentication_audit (agent_id, occurred_at_utc DESC);
+
+                INSERT OR IGNORE INTO schema_migrations (version, applied_at_utc)
+                    VALUES (3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                """,
+                cancellationToken,
+                transaction);
+
             await transaction.CommitAsync(cancellationToken);
             _initialized = true;
         }
@@ -191,6 +232,8 @@ public sealed class AtlasDatabase
         var now = _timeProvider.GetUtcNow();
         var agentId = Guid.CreateVersion7(now);
         var tokenHash = HashToken(request.RegistrationToken);
+        var credential = CreateAgentCredential();
+        var credentialHash = HashToken(credential);
 
         await using var connection = await OpenConnectionAsync(cancellationToken);
         await using var transaction =
@@ -227,14 +270,18 @@ public sealed class AtlasDatabase
                 operating_system,
                 architecture,
                 agent_version,
-                registered_at_utc)
+                registered_at_utc,
+                credential_hash,
+                credential_created_at_utc)
             VALUES (
                 $agentId,
                 $hostName,
                 $operatingSystem,
                 $architecture,
                 $agentVersion,
-                $registeredAtUtc);
+                $registeredAtUtc,
+                $credentialHash,
+                $credentialCreatedAtUtc);
             """;
         insertCommand.Parameters.AddWithValue("$agentId", agentId.ToString("D"));
         insertCommand.Parameters.AddWithValue("$hostName", request.HostName);
@@ -244,10 +291,15 @@ public sealed class AtlasDatabase
         insertCommand.Parameters.AddWithValue("$architecture", request.Architecture);
         insertCommand.Parameters.AddWithValue("$agentVersion", request.AgentVersion);
         insertCommand.Parameters.AddWithValue("$registeredAtUtc", FormatTimestamp(now));
+        insertCommand.Parameters.Add("$credentialHash", SqliteType.Blob).Value =
+            credentialHash;
+        insertCommand.Parameters.AddWithValue(
+            "$credentialCreatedAtUtc",
+            FormatTimestamp(now));
         await insertCommand.ExecuteNonQueryAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
-        return new RegisteredAgent(agentId, now);
+        return new RegisteredAgent(agentId, now, credential);
     }
 
     private async Task<SqliteConnection> OpenConnectionAsync(

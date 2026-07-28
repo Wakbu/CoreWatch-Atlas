@@ -43,6 +43,14 @@ internal static partial class MetricsCollectionLog
     public static partial void OutputFailed(ILogger logger, Exception exception);
 
     [LoggerMessage(
+        EventId = 1005,
+        Level = LogLevel.Error,
+        Message = "Atlas server transmission failed; local collection will continue.")]
+    public static partial void ServerTransmissionFailed(
+        ILogger logger,
+        Exception exception);
+
+    [LoggerMessage(
         EventId = 1010,
         Level = LogLevel.Information,
         Message = "Prometheus endpoint listening at {Url}/metrics.")]

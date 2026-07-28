@@ -2,7 +2,7 @@
 
 ## 범위
 
-Server/API 기반은 중앙 서버, SQLite 저장소와 일회성 등록 토큰을 사용한 영구 Agent ID 발급을 제공한다. Agent 자격 증명 인증·교체·폐기와 Snapshot 수신은 다음 단계에서 구현한다.
+Server/API 기반은 중앙 서버, SQLite 저장소, 일회성 등록, Agent 자격 증명과 Snapshot 수신·조회를 제공한다. 상세 API와 운영 설정은 `SERVER_API_MVP.md`에서 관리한다.
 
 ## 실행
 
@@ -31,16 +31,18 @@ dotnet run --project src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj -c
 
 시작 시 데이터베이스 초기화에 실패하면 서버도 즉시 실패한다. 준비되지 않은 서버가 요청을 받지 않게 하는 fail-fast 정책이다.
 
-## SQLite 스키마 v2
+## SQLite 스키마 v3
 
 - `schema_migrations`: 적용된 스키마 버전
 - `agents`: 영구 Agent ID와 등록 당시 장비 정보
 - `snapshots`: Agent별 원본 JSON Snapshot 이력
 - `registration_tokens`: 토큰 해시, 만료·소비 시각과 발급된 Agent ID
+- `agents` 자격 증명 열: 자격 증명 해시, 생성·폐기 시각
+- `authentication_audit`: 인증 실패·교체·폐기 감사 이벤트
 - `ix_snapshots_agent_captured_at`: 장비·수집 시각 기준 이력 조회
 
 외래 키, WAL 저널과 5초 busy timeout을 적용한다. 마이그레이션과 등록 처리는 트랜잭션으로 중복 실행과 토큰 재사용을 방지한다.
 
 ## 현재 보안 경계
 
-상태 API에는 비밀값이나 데이터베이스 경로를 노출하지 않는다. 등록 토큰 발급은 HTTP API로 노출하지 않고 로컬 CLI에서만 수행한다. 아직 Agent 자격 증명·TLS와 Snapshot 수신 API가 없으므로 운영 인터넷에 직접 공개하는 단계가 아니다.
+상태 API에는 비밀값이나 데이터베이스 경로를 노출하지 않는다. 등록 토큰 발급은 HTTP API로 노출하지 않고 로컬 CLI에서만 수행하며 Agent 자격 증명 원문도 최초 응답에서만 반환한다. 아직 조회 API의 운영자 인증과 TLS 종단이 없으므로 운영 인터넷에 직접 공개하는 단계가 아니다.
