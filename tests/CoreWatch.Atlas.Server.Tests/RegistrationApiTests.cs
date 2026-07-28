@@ -88,6 +88,18 @@ public sealed class RegistrationApiTests
             """;
         command.Parameters.AddWithValue("$agentId", registered.AgentId.ToString("D"));
         Assert.AreEqual(1L, (long)(await command.ExecuteScalarAsync())!);
+
+        await using var credentialCommand = connection.CreateCommand();
+        credentialCommand.CommandText =
+            "SELECT credential_hash FROM agents WHERE agent_id = $agentId;";
+        credentialCommand.Parameters.AddWithValue(
+            "$agentId",
+            registered.AgentId.ToString("D"));
+        var storedCredentialHash =
+            (byte[])(await credentialCommand.ExecuteScalarAsync())!;
+        CollectionAssert.AreEqual(
+            SHA256.HashData(Encoding.UTF8.GetBytes(registered.Credential)),
+            storedCredentialHash);
     }
 
     [TestMethod]

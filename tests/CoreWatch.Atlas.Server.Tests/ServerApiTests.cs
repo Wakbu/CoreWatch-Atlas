@@ -34,10 +34,10 @@ public sealed class ServerApiTests
         var status = await client.GetFromJsonAsync<JsonElement>("/api/v1/status");
 
         Assert.AreEqual("ready", ready.GetProperty("status").GetString());
-        Assert.AreEqual(2, ready.GetProperty("schemaVersion").GetInt32());
+        Assert.AreEqual(3, ready.GetProperty("schemaVersion").GetInt32());
         Assert.AreEqual("CoreWatch-Atlas.Server", status.GetProperty("service").GetString());
         Assert.AreEqual(
-            2,
+            3,
             status.GetProperty("storage").GetProperty("schemaVersion").GetInt32());
     }
 
@@ -60,7 +60,7 @@ public sealed class ServerApiTests
             "SELECT name FROM sqlite_master WHERE type = 'index';");
 
         CollectionAssert.IsSubsetOf(
-            new[] { "schema_migrations", "agents", "snapshots", "registration_tokens" },
+            new[] { "schema_migrations", "agents", "snapshots", "registration_tokens", "authentication_audit" },
             tables);
         CollectionAssert.Contains(indexes, "ix_snapshots_agent_captured_at");
     }
@@ -81,7 +81,7 @@ public sealed class ServerApiTests
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM schema_migrations;";
 
-        Assert.AreEqual(2L, (long)(await command.ExecuteScalarAsync())!);
+        Assert.AreEqual(3L, (long)(await command.ExecuteScalarAsync())!);
     }
 
     private static async Task<string[]> ReadNamesAsync(

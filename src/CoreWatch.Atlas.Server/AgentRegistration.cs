@@ -9,7 +9,8 @@ public sealed record AgentRegistrationRequest(
 
 public sealed record RegisteredAgent(
     Guid AgentId,
-    DateTimeOffset RegisteredAtUtc);
+    DateTimeOffset RegisteredAtUtc,
+    string Credential);
 
 public sealed record IssuedRegistrationToken(
     string Value,

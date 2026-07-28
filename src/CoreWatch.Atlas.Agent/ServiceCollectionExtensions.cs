@@ -17,9 +17,20 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(MetricsCollectionOptions.SectionName));
         services.Configure<LocalOutputOptions>(
             configuration.GetSection(LocalOutputOptions.SectionName));
+        services.Configure<ServerTransmissionOptions>(
+            configuration.GetSection(ServerTransmissionOptions.SectionName));
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<TextWriter>(static _ => Console.Out);
         services.TryAddSingleton<LatestMetricsSnapshotStore>();
+        services.TryAddSingleton(
+            static _ => new HttpClient(new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            })
+            {
+                Timeout = TimeSpan.FromSeconds(10),
+            });
+        services.TryAddSingleton<AtlasServerClient>();
         services.TryAddSingleton<MetricsSnapshotPublisher>();
         services.AddSingleton<ISystemMetricsCollector, TCollector>();
         services.AddHostedService<MetricsCollectionWorker>();
