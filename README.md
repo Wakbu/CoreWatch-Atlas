@@ -2,7 +2,7 @@
 
 CoreWatch-Atlas는 Windows와 Linux 장비의 상태를 한곳에서 확인하기 위한 크로스플랫폼 시스템 모니터링 플랫폼입니다.
 
-> 현재 Agent 수집·중앙 전송과 Server/API MVP까지 구현됐으며 Web UI와 정식 배포 패키지는 아직 없습니다.
+> 현재 Agent 수집·중앙 전송, Server/API와 Web 대시보드 MVP까지 구현됐으며 정식 배포 패키지는 아직 없습니다.
 
 ## 현재 기능
 
@@ -13,6 +13,7 @@ CoreWatch-Atlas는 Windows와 Linux 장비의 상태를 한곳에서 확인하�
 - ASP.NET Core 중앙 서버, SQLite 스키마와 상태 API
 - 일회성 등록 토큰과 UUIDv7 영구 Agent ID 발급
 - Agent 자격 증명, Snapshot 수신·조회, 온라인 판정과 보존 정리
+- 반응형 Web 대시보드, 서버 카드·검색·경고·이력 차트
 
 [현재 구현 및 인수인계](CURRENT_STATE.md) · [다음 작업](docs/NEXT_STEPS.md) · [전체 설계](docs/COREWATCH_ATLAS_DESIGN.md)
 
@@ -35,7 +36,7 @@ dotnet run --project src/CoreWatch.Atlas.Agent/CoreWatch.Atlas.Agent.csproj -c R
 dotnet run --project src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj -c Release
 ```
 
-현재 Agent 인증, Snapshot 전송·조회와 온라인 판정까지 제공합니다. 설정과 API는 [Server/API MVP 문서](docs/SERVER_API_MVP.md)를 참고하세요.
+Agent 인증, Snapshot 전송·조회와 Web 대시보드를 함께 제공합니다. 실행 후 Server 루트 URL을 브라우저로 열면 됩니다. 설정과 API는 [Server/API MVP 문서](docs/SERVER_API_MVP.md), 화면 기능은 [Web 대시보드 MVP 문서](docs/WEB_DASHBOARD_MVP.md)를 참고하세요.
 
 ## 제품 구분
 
@@ -59,7 +60,7 @@ Prometheus  ─ 선택적 연동 ────────────┘
 1. 저장소와 공통 빌드 구조: 완료
 2. Windows/Linux Agent와 로컬 출력: 완료
 3. 중앙 Server/API MVP와 Agent 전송: 완료
-4. 웹 대시보드
+4. 웹 대시보드 MVP: 완료
 5. 운영자 인증, 서비스 설치와 Docker 배포
 6. `1.0.0` 안정화
 

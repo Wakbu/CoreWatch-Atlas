@@ -25,6 +25,23 @@ public sealed class ServerApiTests
     }
 
     [TestMethod]
+    public async Task DashboardAndStaticAssetsAreServed()
+    {
+        using var fixture = new ServerFixture();
+        using var client = fixture.CreateClient();
+
+        var dashboard = await client.GetAsync("/");
+        var stylesheet = await client.GetAsync("/css/atlas.css");
+        var script = await client.GetAsync("/js/atlas.js");
+
+        Assert.AreEqual(HttpStatusCode.OK, dashboard.StatusCode);
+        Assert.AreEqual("text/html", dashboard.Content.Headers.ContentType?.MediaType);
+        StringAssert.Contains(await dashboard.Content.ReadAsStringAsync(), "CoreWatch-Atlas");
+        Assert.AreEqual("text/css", stylesheet.Content.Headers.ContentType?.MediaType);
+        Assert.IsTrue(script.Content.Headers.ContentType?.MediaType?.Contains("javascript"));
+    }
+
+    [TestMethod]
     public async Task ReadyAndStatusEndpointsReportCurrentSchema()
     {
         using var fixture = new ServerFixture();
