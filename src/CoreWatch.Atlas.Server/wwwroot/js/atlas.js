@@ -1,5 +1,5 @@
 (()=>{"use strict";
-const S={agents:[],histories:new Map(),filter:"",loading:false,updated:null,operator:null},T={warn:70,critical:90};
+const S={agents:[],histories:new Map(),filter:"",loading:false,updated:null,operator:null},T={warn:70,critical:90},POLL_INTERVAL_MS=15_000;
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s),shell=$("#shell"),content=$("#content"),title=$("#title"),search=$("#search"),refresh=$("#refresh");
 const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 async function api(path,options){const response=await fetch(path,{...options,headers:{Accept:"application/json",...(options?.headers||{})}});if(response.status===401){showLogin();throw Error("로그인이 필요합니다.")}return response}
@@ -36,5 +36,5 @@ function render(){const r=route();$$(".nav").forEach(x=>x.classList.toggle("acti
 function bind(){$$(".server-card").forEach(x=>{const go=()=>location.hash=`/server/${x.dataset.agent}`;x.onclick=go;x.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});$("#clearSearch")?.addEventListener("click",()=>{search.value="";S.filter="";render();search.focus()});$("#retry")?.addEventListener("click",load);$("#back")?.addEventListener("click",()=>location.hash="/")}
 function connection(ok){$("#connection").className=ok?"online":"error";$("#connectionText").textContent=ok?"서버 연결됨":"연결 오류"}
 $("#collapse").onclick=()=>{shell.classList.toggle("collapsed");localStorage.setItem("atlas-sidebar",shell.classList.contains("collapsed")?"1":"0")};$("#mobileMenu").onclick=()=>shell.classList.add("mobile-open");$("#backdrop").onclick=()=>shell.classList.remove("mobile-open");refresh.onclick=load;search.oninput=()=>{S.filter=search.value.trim();render()};addEventListener("hashchange",render);addEventListener("resize",()=>{const r=route();if(r.view==="detail"&&S.histories.has(r.id))requestAnimationFrame(()=>charts(S.histories.get(r.id)))});if(localStorage.getItem("atlas-sidebar")==="1")shell.classList.add("collapsed");load();
-$("#loginForm").addEventListener("submit",login);$("#logout").addEventListener("click",logout);authenticate();
+$("#loginForm").addEventListener("submit",login);$("#logout").addEventListener("click",logout);authenticate();setInterval(()=>{if(!document.hidden)load()},POLL_INTERVAL_MS);addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
 })();
