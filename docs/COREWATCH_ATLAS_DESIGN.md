@@ -186,9 +186,11 @@ Prometheus  ─ 선택적 연동 ────────────┘
 | 운영 저장소 | PostgreSQL |
 | 메트릭 호환 | Prometheus exposition format |
 | 컨테이너 | Docker/OCI |
-| 테스트 | xUnit 및 통합 테스트 |
+| 테스트 | MSTest.Sdk, Microsoft Testing Platform 및 통합 테스트 |
 
 Blazor를 우선 제안하는 이유는 기존 C# 자산과 개발 경험을 활용하고, 서버·UI 간 모델 공유를 쉽게 하기 위해서다. 대규모 프론트엔드 요구가 생기면 React 등으로 교체할 수 있다.
+
+Web 화면의 확정된 첫 페이지, 접이식 왼쪽 메뉴와 서버 상세 이동 기준은 `WEB_DASHBOARD_DESIGN.md`에서 관리한다.
 
 ## 8. 공통 수집 계약
 
