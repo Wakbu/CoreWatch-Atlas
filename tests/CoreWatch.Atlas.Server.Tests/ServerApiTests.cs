@@ -39,6 +39,9 @@ public sealed class ServerApiTests
         Assert.AreEqual("text/html", dashboard.Content.Headers.ContentType?.MediaType);
         StringAssert.Contains(await dashboard.Content.ReadAsStringAsync(), "CoreWatch-Atlas");
         Assert.AreEqual("text/css", stylesheet.Content.Headers.ContentType?.MediaType);
+        var stylesheetText = await stylesheet.Content.ReadAsStringAsync();
+        StringAssert.Contains(stylesheetText, ".backdrop{display:none}");
+        StringAssert.Contains(stylesheetText, "--bg:#f5f6f8");
         Assert.IsTrue(script.Content.Headers.ContentType?.MediaType?.Contains("javascript"));
     }
 
