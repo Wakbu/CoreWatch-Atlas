@@ -94,3 +94,9 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - Web 대시보드 설계: `docs/WEB_DASHBOARD_DESIGN.md`
 - Web 대시보드 MVP: `docs/WEB_DASHBOARD_MVP.md`
 - 다음 작업: `docs/NEXT_STEPS.md`
+## 2026-07-28 Web UI 정합성 수정
+
+- 인증 추가 후 드러난 데스크톱 Grid 자동 배치 충돌을 수정해 본문이 사이드바 아래로 밀리지 않게 했다.
+- 접힌 사이드바의 토글 버튼과 화살표를 중앙 정렬하고 메뉴와 겹치지 않게 했다.
+- 기존 CoreWatch 개인 사용자판의 밝은 캔버스, 흰 패널, 짙은 사이드바와 자원별 포인트 색상을 Atlas Web에 반영했다.
+- 정적 자산 테스트에 데스크톱 backdrop 숨김과 CoreWatch 배경 토큰 회귀 검사를 추가했다.
