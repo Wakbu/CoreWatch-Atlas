@@ -13,6 +13,7 @@ CoreWatch-Atlas는 Windows와 Linux 장비의 상태를 한곳에서 확인하�
 - ASP.NET Core 중앙 서버, SQLite 스키마와 상태 API
 - 일회성 등록 토큰과 UUIDv7 영구 Agent ID 발급
 - Agent 자격 증명, Snapshot 수신·조회, 온라인 판정과 보존 정리
+- Viewer·Administrator 운영자 로그인과 역할 기반 조회 권한
 - 반응형 Web 대시보드, 서버 카드·검색·경고·이력 차트
 
 [현재 구현 및 인수인계](CURRENT_STATE.md) · [다음 작업](docs/NEXT_STEPS.md) · [전체 설계](docs/COREWATCH_ATLAS_DESIGN.md)
@@ -34,6 +35,12 @@ dotnet run --project src/CoreWatch.Atlas.Agent/CoreWatch.Atlas.Agent.csproj -c R
 
 ```shell
 dotnet run --project src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj -c Release
+```
+
+첫 운영자는 로컬 CLI에서 만든다. 기본 역할은 `Administrator`다.
+
+```shell
+dotnet run --project src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj -c Release -- --create-operator admin
 ```
 
 Agent 인증, Snapshot 전송·조회와 Web 대시보드를 함께 제공합니다. 실행 후 Server 루트 URL을 브라우저로 열면 됩니다. 설정과 API는 [Server/API MVP 문서](docs/SERVER_API_MVP.md), 화면 기능은 [Web 대시보드 MVP 문서](docs/WEB_DASHBOARD_MVP.md)를 참고하세요.
@@ -61,8 +68,9 @@ Prometheus  ─ 선택적 연동 ────────────┘
 2. Windows/Linux Agent와 로컬 출력: 완료
 3. 중앙 Server/API MVP와 Agent 전송: 완료
 4. 웹 대시보드 MVP: 완료
-5. 운영자 인증, 서비스 설치와 Docker 배포
-6. `1.0.0` 안정화
+5. 운영자 인증·조회 권한: 완료
+6. HTTPS, 비밀정보 관리, 서비스 설치와 Docker 배포
+7. `1.0.0` 안정화
 
 ## 개발 빌드
 

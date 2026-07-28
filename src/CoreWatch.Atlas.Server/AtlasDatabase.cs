@@ -9,7 +9,7 @@ namespace CoreWatch.Atlas.Server;
 
 public sealed partial class AtlasDatabase
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
 
     private readonly string _connectionString;
     private readonly TimeProvider _timeProvider;
@@ -163,6 +163,41 @@ public sealed partial class AtlasDatabase
 
                 INSERT OR IGNORE INTO schema_migrations (version, applied_at_utc)
                     VALUES (3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                """,
+                cancellationToken,
+                transaction);
+            await ExecuteNonQueryAsync(
+                connection,
+                """
+                CREATE TABLE IF NOT EXISTS atlas_operators (
+                    operator_id TEXT PRIMARY KEY,
+                    username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL CHECK (role IN ('Viewer', 'Administrator')),
+                    enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+                    failed_login_count INTEGER NOT NULL DEFAULT 0,
+                    lockout_end_utc TEXT NULL,
+                    created_at_utc TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS operator_authentication_audit (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    operator_id TEXT NULL,
+                    occurred_at_utc TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    remote_address TEXT NULL,
+                    FOREIGN KEY (operator_id)
+                        REFERENCES atlas_operators(operator_id) ON DELETE SET NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS ix_operator_authentication_audit_time
+                    ON operator_authentication_audit (
+                        operator_id,
+                        occurred_at_utc DESC
+                    );
+
+                INSERT OR IGNORE INTO schema_migrations (version, applied_at_utc)
+                    VALUES (4, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
                 """,
                 cancellationToken,
                 transaction);

@@ -1,19 +1,26 @@
+using System.Security.Claims;
 using CoreWatch.Atlas.Contracts;
 using CoreWatch.Atlas.Server;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Options;
 
 const long maximumSnapshotBytes = 2 * 1024 * 1024;
 
+var createOperatorUsername = ReadOption(args, "--create-operator");
+var createOperatorRole =
+    ReadOption(args, "--role") ?? OperatorRoles.Administrator;
 var createRegistrationToken = args.Contains(
     "--create-registration-token",
     StringComparer.Ordinal);
+if (createRegistrationToken && createOperatorUsername is not null)
+{
+    throw new InvalidOperationException(
+        "Only one local administration command can run at a time.");
+}
+
 var builder = WebApplication.CreateBuilder(
-    args.Where(
-            argument => !string.Equals(
-                argument,
-                "--create-registration-token",
-                StringComparison.Ordinal))
-        .ToArray());
+    RemoveLocalCommandArguments(args));
 builder.WebHost.ConfigureKestrel(
     options => options.Limits.MaxRequestBodySize = maximumSnapshotBytes);
 builder.Services
@@ -43,6 +50,59 @@ builder.Services
         options => options.CleanupIntervalMinutes is >= 1 and <= 1440,
         "CleanupIntervalMinutes must be between 1 and 1440.")
     .ValidateOnStart();
+builder.Services
+    .AddOptions<OperatorAuthenticationOptions>()
+    .Bind(
+        builder.Configuration.GetSection(
+            OperatorAuthenticationOptions.SectionName))
+    .Validate(
+        options => options.SessionMinutes is >= 5 and <= 1440,
+        "SessionMinutes must be between 5 and 1440.")
+    .Validate(
+        options => options.MaxFailedAttempts is >= 3 and <= 20,
+        "MaxFailedAttempts must be between 3 and 20.")
+    .Validate(
+        options => options.LockoutMinutes is >= 1 and <= 1440,
+        "LockoutMinutes must be between 1 and 1440.")
+    .ValidateOnStart();
+var sessionMinutes = builder.Configuration.GetValue(
+    $"{OperatorAuthenticationOptions.SectionName}:SessionMinutes",
+    30);
+builder.Services
+    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(
+        options =>
+        {
+            options.Cookie.Name = "CoreWatchAtlas.Operator";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(
+                Math.Clamp(sessionMinutes, 5, 1440));
+            options.SlidingExpiration = true;
+            options.Events.OnRedirectToLogin = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            };
+            options.Events.OnRedirectToAccessDenied = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            };
+        });
+builder.Services.AddAuthorization(
+    options =>
+    {
+        options.AddPolicy(
+            OperatorPolicies.View,
+            policy => policy.RequireRole(
+                OperatorRoles.Viewer,
+                OperatorRoles.Administrator));
+        options.AddPolicy(
+            OperatorPolicies.Admin,
+            policy => policy.RequireRole(OperatorRoles.Administrator));
+    });
 builder.Services.AddSingleton<AtlasDatabase>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHostedService<SnapshotRetentionWorker>();
@@ -61,12 +121,114 @@ if (createRegistrationToken)
     return;
 }
 
+if (createOperatorUsername is not null)
+{
+    var password = ReadPassword("Password: ");
+    var confirmation = ReadPassword("Confirm password: ");
+    if (!string.Equals(password, confirmation, StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("Password confirmation does not match.");
+    }
+
+    var created = await database.CreateOperatorAsync(
+        createOperatorUsername,
+        password,
+        createOperatorRole);
+    Console.WriteLine(
+        $"Created operator '{created.Username}' with role '{created.Role}'.");
+    return;
+}
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet(
     "/health/live",
     () => Results.Ok(new { status = "ok" }));
+
+app.MapPost(
+    "/api/v1/auth/login",
+    async (
+        OperatorLoginRequest request,
+        HttpContext context,
+        AtlasDatabase storage,
+        IOptions<OperatorAuthenticationOptions> options,
+        CancellationToken cancellationToken) =>
+    {
+        var settings = options.Value;
+        var result = await storage.AuthenticateOperatorAsync(
+            request.Username,
+            request.Password,
+            context.Connection.RemoteIpAddress?.ToString(),
+            settings.MaxFailedAttempts,
+            TimeSpan.FromMinutes(settings.LockoutMinutes),
+            cancellationToken);
+        if (result.Status != OperatorLoginStatus.Succeeded
+            || result.Identity is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var identity = result.Identity;
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, identity.OperatorId.ToString("D")),
+            new Claim(ClaimTypes.Name, identity.Username),
+            new Claim(ClaimTypes.Role, identity.Role),
+        };
+        await context.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    claims,
+                    CookieAuthenticationDefaults.AuthenticationScheme)));
+        return Results.Ok(
+            new OperatorSessionResponse(identity.Username, identity.Role));
+    });
+
+app.MapGet(
+        "/api/v1/auth/me",
+        (ClaimsPrincipal user) => Results.Ok(
+            new OperatorSessionResponse(
+                user.Identity?.Name ?? string.Empty,
+                user.FindFirstValue(ClaimTypes.Role) ?? string.Empty)))
+    .RequireAuthorization(OperatorPolicies.View);
+
+app.MapGet(
+        "/api/v1/operators",
+        async (
+            AtlasDatabase storage,
+            CancellationToken cancellationToken) =>
+            Results.Ok(
+                await storage.ListOperatorsAsync(cancellationToken)))
+    .RequireAuthorization(OperatorPolicies.Admin);
+
+app.MapPost(
+        "/api/v1/auth/logout",
+        async (
+            ClaimsPrincipal user,
+            HttpContext context,
+            AtlasDatabase storage,
+            CancellationToken cancellationToken) =>
+        {
+            if (Guid.TryParse(
+                    user.FindFirstValue(ClaimTypes.NameIdentifier),
+                    out var operatorId))
+            {
+                await storage.WriteOperatorEventAsync(
+                    operatorId,
+                    "logout",
+                    context.Connection.RemoteIpAddress?.ToString(),
+                    cancellationToken);
+            }
+
+            await context.SignOutAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme);
+            return Results.NoContent();
+        })
+    .RequireAuthorization(OperatorPolicies.View);
 
 app.MapGet(
     "/health/ready",
@@ -110,7 +272,8 @@ app.MapGet(
                 schemaVersion,
             },
         });
-    });
+    })
+    .RequireAuthorization(OperatorPolicies.View);
 
 app.MapPost(
     "/api/v1/agents/register",
@@ -232,7 +395,8 @@ app.MapGet(
         var offlineAfter = TimeSpan.FromSeconds(options.Value.OfflineAfterSeconds);
         return Results.Ok(
             await storage.ListAgentsAsync(offlineAfter, cancellationToken));
-    });
+    })
+    .RequireAuthorization(OperatorPolicies.View);
 
 app.MapGet(
     "/api/v1/agents/{agentId:guid}",
@@ -248,7 +412,8 @@ app.MapGet(
             offlineAfter,
             cancellationToken);
         return agent is null ? Results.NotFound() : Results.Ok(agent);
-    });
+    })
+    .RequireAuthorization(OperatorPolicies.View);
 
 app.MapGet(
     "/api/v1/agents/{agentId:guid}/snapshots",
@@ -287,7 +452,8 @@ app.MapGet(
                 to,
                 requestedLimit,
                 cancellationToken));
-    });
+    })
+    .RequireAuthorization(OperatorPolicies.View);
 
 app.Run();
 
@@ -344,6 +510,80 @@ static void AddLengthError(
     {
         errors[field] =
             [$"{field} must contain between {minimum} and {maximum} characters."];
+    }
+}
+
+static string? ReadOption(string[] arguments, string option)
+{
+    for (var index = 0; index < arguments.Length; index++)
+    {
+        if (string.Equals(arguments[index], option, StringComparison.Ordinal))
+        {
+            if (index + 1 >= arguments.Length
+                || arguments[index + 1].StartsWith("--", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{option} requires a value.");
+            }
+
+            return arguments[index + 1];
+        }
+    }
+
+    return null;
+}
+
+static string[] RemoveLocalCommandArguments(string[] arguments)
+{
+    var result = new List<string>();
+    for (var index = 0; index < arguments.Length; index++)
+    {
+        if (string.Equals(
+                arguments[index],
+                "--create-registration-token",
+                StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        if (arguments[index] is "--create-operator" or "--role")
+        {
+            index++;
+            continue;
+        }
+
+        result.Add(arguments[index]);
+    }
+
+    return result.ToArray();
+}
+
+static string ReadPassword(string prompt)
+{
+    if (Console.IsInputRedirected)
+    {
+        throw new InvalidOperationException(
+            "Operator creation requires an interactive terminal.");
+    }
+
+    Console.Write(prompt);
+    var value = new List<char>();
+    while (true)
+    {
+        var key = Console.ReadKey(intercept: true);
+        if (key.Key == ConsoleKey.Enter)
+        {
+            Console.WriteLine();
+            return new string(value.ToArray());
+        }
+
+        if (key.Key == ConsoleKey.Backspace && value.Count > 0)
+        {
+            value.RemoveAt(value.Count - 1);
+        }
+        else if (!char.IsControl(key.KeyChar))
+        {
+            value.Add(key.KeyChar);
+        }
     }
 }
 
