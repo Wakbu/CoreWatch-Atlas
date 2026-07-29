@@ -1,6 +1,6 @@
 # CoreWatch-Atlas 현재 상태
 
-마지막 갱신: 2026-07-28
+마지막 갱신: 2026-07-29
 새 채팅이나 작업자는 이 문서, `AGENTS.md`, `docs/NEXT_STEPS.md`와 관련 설계를 먼저 읽는다.
 
 ## 제품 경계
@@ -14,7 +14,7 @@
 
 ## 현재 구현
 
-Windows·Linux Agent가 실제 지표를 인증된 중앙 Server로 전송하고, 반응형 Web 대시보드에서 여러 장비의 최신 상태와 최근 24시간 이력을 확인할 수 있는 단계다.
+Windows·Linux Agent가 보호 저장소의 자격 증명으로 HTTPS 중앙 Server에 지표를 전송하고, 인증된 반응형 Web 대시보드에서 여러 장비의 최신 상태와 최근 24시간 이력을 확인할 수 있는 단계다.
 
 - 플랫폼 독립 불변 Snapshot 계약
 - 15초 기본 주기, OS별 Collector 자동 선택, 취소·오류 격리·재시도
@@ -32,8 +32,11 @@ Windows·Linux Agent가 실제 지표를 인증된 중앙 Server로 전송하고
 - 로컬 CLI 운영자 생성, PBKDF2 비밀번호 해시와 로그인 실패 잠금
 - `Viewer`·`Administrator` 역할, 쿠키 로그인·로그아웃과 인증 감사
 - 대시보드·조회 API 운영자 인증과 관리자 전용 운영자 목록
+- 외부 HTTP 거부, HTTPS·HSTS·CSP와 로그인·로그아웃 CSRF 방어
+- 운영자 쿠키 Data Protection 키 영구 저장과 Windows DPAPI 보호
+- Agent 등록·교체 CLI, Windows DPAPI·Linux 파일 권한 기반 자격 증명 보호 저장
 - Server와 함께 제공되는 반응형 Web 대시보드, 검색·파생 경고·이벤트·상세 차트
-- 자동 테스트 60개: 계약 10, Agent 15, Linux 10, Windows 6, Server 19
+- 자동 테스트 66개: 계약 10, Agent 18, Linux 10, Windows 6, Server 22
 - 원격 명령 실행이나 시스템 변경 기능 없음
 
 ## 기술·검증 기준
@@ -45,7 +48,7 @@ Windows·Linux Agent가 실제 지표를 인증된 중앙 Server로 전송하고
 마지막 검증:
 
 - Windows 로컬 Debug/Release 경고 0·오류 0
-- 테스트 60/60 통과
+- 테스트 66/66 통과
 - 취약·deprecated 패키지 없음
 - Release Agent JSON 한 줄 출력 확인
 - 활성화된 `/metrics` HTTP 200·Prometheus 내용 확인
@@ -64,6 +67,7 @@ Windows·Linux Agent가 실제 지표를 인증된 중앙 Server로 전송하고
 - Agent 자격 증명과 Server/API MVP
 - 반응형 Web 대시보드 MVP
 - 운영 보안 8A: 운영자 로그인과 Viewer·Administrator 조회 권한
+- 운영 보안 8B: HTTPS, CSRF·보안 헤더와 Server·Agent 비밀정보 보호 저장
 
 ## 제품·UI 결정
 
@@ -71,16 +75,15 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 
 ## 알려진 제한
 
-- HTTPS가 아직 없으므로 운영 인터넷에 직접 공개하지 않고 loopback 또는 신뢰된 사설망에서 운영해야 한다.
-- 운영자 계정 생성은 현재 Server 로컬 CLI만 지원하며 MFA와 계정 수명주기 UI는 없다.
-- 운영자 쿠키 Data Protection 키의 운영용 영구·보호 저장은 다음 비밀정보 관리 단계에서 구현한다.
-- Prometheus endpoint에는 아직 인증·TLS가 없으므로 기본 loopback을 유지하거나 사설망·방화벽으로 보호해야 한다.
-- Agent 등록 정보와 자격 증명은 아직 자동 영구 저장되지 않으므로 운영자가 환경 변수나 별도 비밀 저장소로 주입해야 한다.
+- 운영 인증서 자동 발급·갱신, reverse proxy 표준 구성과 다중 Server용 외부 키 저장소 연동은 아직 없다.
+- 운영자 계정 생성은 Server 로컬 CLI만 지원하며 MFA와 계정 수명주기 UI는 없다.
+- Linux Data Protection 키는 소유자 전용 디렉터리로 제한되지만 별도 KMS 암호화는 배포 환경에서 구성해야 한다.
+- Prometheus endpoint에는 인증·TLS가 없으므로 기본 loopback을 유지하거나 사설망·방화벽으로 보호해야 한다.
 - 정식 Release와 설치·서비스 패키지는 없다.
 
 ## 다음 작업
 
-다음 구현은 `docs/NEXT_STEPS.md`의 8B다. HTTPS 강제와 Server·Agent 비밀정보 저장을 설계·구현한다.
+다음 구현은 `docs/NEXT_STEPS.md`의 8C다. 경고 영구 저장·알림과 Server·Agent 배포·운영 기반을 설계한다.
 
 ## 관련 문서
 
@@ -91,6 +94,7 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - Windows Collector: `docs/WINDOWS_COLLECTOR.md`
 - Server 기반: `docs/SERVER_FOUNDATION.md`
 - Server/API MVP: `docs/SERVER_API_MVP.md`
+- HTTPS·비밀정보 운영: `docs/SECURITY_DEPLOYMENT.md`
 - Web 대시보드 설계: `docs/WEB_DASHBOARD_DESIGN.md`
 - Web 대시보드 MVP: `docs/WEB_DASHBOARD_MVP.md`
 - 다음 작업: `docs/NEXT_STEPS.md`

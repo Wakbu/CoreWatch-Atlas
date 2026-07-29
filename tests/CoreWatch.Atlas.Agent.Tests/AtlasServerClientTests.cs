@@ -59,6 +59,24 @@ public sealed class AtlasServerClientTests
     }
 
     [TestMethod]
+    public void NonLoopbackHttpServerIsRejected()
+    {
+        using var httpClient = new HttpClient(
+            new RecordingHandler(HttpStatusCode.Created));
+
+        Assert.Throws<InvalidOperationException>(
+            () => new AtlasServerClient(
+                httpClient,
+                Options.Create(
+                    new ServerTransmissionOptions
+                    {
+                        Enabled = true,
+                        BaseUrl = "http://atlas.example.test/",
+                        AgentId = AgentId.ToString("D"),
+                        Credential = "catlas_agent_test-secret",
+                    })));
+    }
+    [TestMethod]
     public async Task PublisherIsolatesServerFailureAndKeepsLatestSnapshot()
     {
         var handler = new RecordingHandler(HttpStatusCode.ServiceUnavailable);

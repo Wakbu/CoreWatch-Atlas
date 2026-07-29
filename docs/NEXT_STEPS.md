@@ -94,12 +94,14 @@ Windows API 기반 기본 지표와 Windows 실환경 검증을 구현했다.
 - 대시보드·조회 API 역할 기반 권한
 - 관리자 전용 운영자 목록
 
-### 8B. HTTPS와 비밀정보 관리
+### 8B. HTTPS와 비밀정보 관리 (완료)
 
-- HTTPS와 secret 저장소
-- 운영자 쿠키 Data Protection 키 영구·보호 저장
-- Agent 자격 증명의 Windows·Linux 안전 저장
-- CSRF 방어와 운영 보안 헤더
+완료일: 2026-07-29
+
+- 외부 HTTP 거부와 loopback 개발 예외, Kestrel HTTPS 인증서 구성
+- 운영자 쿠키 Data Protection 키의 영구 저장과 Windows DPAPI 보호
+- Agent 등록·교체 CLI와 Windows DPAPI·Linux 권한 기반 안전 저장
+- 로그인·로그아웃 CSRF 방어와 HSTS·CSP 등 운영 보안 헤더
 
 ### 8C. 경고·배포·운영
 

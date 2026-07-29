@@ -33,6 +33,72 @@ public sealed class OperatorAuthenticationTests
     }
 
     [TestMethod]
+    public async Task LoginRequiresCsrfToken()
+    {
+        using var fixture = new OperatorFixture();
+        using var client = fixture.CreateClient();
+        var database = fixture.Services.GetRequiredService<AtlasDatabase>();
+        await database.CreateOperatorAsync(
+            "csrf-user",
+            TestPassword,
+            OperatorRoles.Viewer);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new OperatorLoginRequest("csrf-user", TestPassword));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task HttpsResponsesIncludeSecurityHeadersAndSecureCookie()
+    {
+        using var fixture = new OperatorFixture();
+        using var client = fixture.CreateClient(
+            new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost"),
+                HandleCookies = true,
+            });
+        var database = fixture.Services.GetRequiredService<AtlasDatabase>();
+        await database.CreateOperatorAsync(
+            "secure-user",
+            TestPassword,
+            OperatorRoles.Viewer);
+
+        var live = await client.GetAsync("/health/live");
+        var login = await LoginAsync(client, "secure-user", TestPassword);
+
+        Assert.AreEqual("nosniff", live.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.AreEqual("DENY", live.Headers.GetValues("X-Frame-Options").Single());
+
+        StringAssert.Contains(
+            live.Headers.GetValues("Content-Security-Policy").Single(),
+            "frame-ancestors 'none'");
+        StringAssert.Contains(
+            login.Headers.GetValues("Set-Cookie").Single(
+                value => value.StartsWith(
+                    "CoreWatchAtlas.Operator=",
+                    StringComparison.Ordinal)),
+            "secure",
+            StringComparison.OrdinalIgnoreCase);
+    }
+    [TestMethod]
+    public async Task HttpIsRejectedWhenLoopbackExceptionIsDisabled()
+    {
+        using var fixture = new OperatorFixture(allowLoopbackHttp: false);
+        using var client = fixture.CreateClient(
+            new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("http://localhost"),
+                AllowAutoRedirect = false,
+            });
+
+        var response = await client.GetAsync("/health/live");
+
+        Assert.AreEqual(HttpStatusCode.UpgradeRequired, response.StatusCode);
+    }
+    [TestMethod]
     public async Task ViewerCanReadButCannotListOperators()
     {
         using var fixture = new OperatorFixture();
@@ -53,7 +119,9 @@ public sealed class OperatorAuthenticationTests
             await login.Content.ReadFromJsonAsync<OperatorSessionResponse>();
         var agents = await client.GetAsync("/api/v1/agents");
         var operators = await client.GetAsync("/api/v1/operators");
-        var logout = await client.PostAsync("/api/v1/auth/logout", null);
+        var logout = await SecurityTestClient.PostWithCsrfAsync(
+            client,
+            "/api/v1/auth/logout");
         var afterLogout = await client.GetAsync("/api/v1/agents");
 
         Assert.AreEqual(HttpStatusCode.OK, login.StatusCode);
@@ -148,11 +216,13 @@ public sealed class OperatorAuthenticationTests
         HttpClient client,
         string username,
         string password) =>
-        client.PostAsJsonAsync(
+        SecurityTestClient.PostAsJsonWithCsrfAsync(
+            client,
             "/api/v1/auth/login",
             new OperatorLoginRequest(username, password));
 
-    private sealed class OperatorFixture : WebApplicationFactory<Program>
+    private sealed class OperatorFixture(
+        bool allowLoopbackHttp = true) : WebApplicationFactory<Program>
     {
         private readonly string _temporaryDirectory =
             Path.Combine(
@@ -176,6 +246,10 @@ public sealed class OperatorAuthenticationTests
                         {
                             [$"{ServerStorageOptions.SectionName}:DatabasePath"] =
                                 DatabasePath,
+                            [$"{ServerSecurityOptions.SectionName}:DataProtectionKeyPath"] =
+                                Path.Combine(_temporaryDirectory, "keys"),
+                            [$"{ServerSecurityOptions.SectionName}:AllowLoopbackHttp"] =
+                                allowLoopbackHttp.ToString(),
                         });
                 });
             builder.ConfigureServices(

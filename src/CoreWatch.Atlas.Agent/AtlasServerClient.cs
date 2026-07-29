@@ -28,11 +28,12 @@ public sealed class AtlasServerClient
             return;
         }
 
-        if (!Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out baseUri)
-            || baseUri.Scheme is not ("http" or "https"))
+        if (!AgentCredentialStore.TryValidateServerUri(
+                settings.BaseUrl,
+                out baseUri))
         {
             throw new InvalidOperationException(
-                "Enabled Atlas server transmission requires an absolute HTTP(S) BaseUrl.");
+                "Enabled Atlas server transmission requires HTTPS, except for loopback HTTP.");
         }
 
         if (!Guid.TryParse(settings.AgentId, out agentId))

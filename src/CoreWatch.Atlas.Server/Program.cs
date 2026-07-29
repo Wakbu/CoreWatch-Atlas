@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CoreWatch.Atlas.Contracts;
 using CoreWatch.Atlas.Server;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Options;
@@ -65,6 +66,9 @@ builder.Services
         options => options.LockoutMinutes is >= 1 and <= 1440,
         "LockoutMinutes must be between 1 and 1440.")
     .ValidateOnStart();
+builder.Services.AddAtlasServerSecurity(
+    builder.Configuration,
+    builder.Environment);
 var sessionMinutes = builder.Configuration.GetValue(
     $"{OperatorAuthenticationOptions.SectionName}:SessionMinutes",
     30);
@@ -133,6 +137,7 @@ if (createOperatorUsername is not null)
     return;
 }
 
+app.UseAtlasServerSecurity();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();
@@ -142,15 +147,30 @@ app.MapGet(
     "/health/live",
     () => Results.Ok(new { status = "ok" }));
 
+app.MapGet(
+    "/api/v1/auth/csrf",
+    (HttpContext context, IAntiforgery antiforgery) =>
+    {
+        var tokens = antiforgery.GetAndStoreTokens(context);
+        context.Response.Headers.CacheControl = "no-store";
+        return Results.Ok(new { token = tokens.RequestToken });
+    });
+
 app.MapPost(
     "/api/v1/auth/login",
     async (
         OperatorLoginRequest request,
         HttpContext context,
+        IAntiforgery antiforgery,
         AtlasDatabase storage,
         IOptions<OperatorAuthenticationOptions> options,
         CancellationToken cancellationToken) =>
     {
+        if (!await ValidateAntiforgeryAsync(context, antiforgery))
+        {
+            return Results.BadRequest(new { error = "Invalid CSRF token." });
+        }
+
         var settings = options.Value;
         var result = await storage.AuthenticateOperatorAsync(
             request.Username,
@@ -204,9 +224,15 @@ app.MapPost(
         async (
             ClaimsPrincipal user,
             HttpContext context,
+            IAntiforgery antiforgery,
             AtlasDatabase storage,
             CancellationToken cancellationToken) =>
         {
+            if (!await ValidateAntiforgeryAsync(context, antiforgery))
+            {
+                return Results.BadRequest(new { error = "Invalid CSRF token." });
+            }
+
             if (Guid.TryParse(
                     user.FindFirstValue(ClaimTypes.NameIdentifier),
                     out var operatorId))
@@ -450,6 +476,21 @@ app.MapGet(
     .RequireAuthorization(OperatorPolicies.View);
 
 app.Run();
+
+static async Task<bool> ValidateAntiforgeryAsync(
+    HttpContext context,
+    IAntiforgery antiforgery)
+{
+    try
+    {
+        await antiforgery.ValidateRequestAsync(context);
+        return true;
+    }
+    catch (AntiforgeryValidationException)
+    {
+        return false;
+    }
+}
 
 static async Task<bool> AuthenticateAsync(
     HttpContext context,

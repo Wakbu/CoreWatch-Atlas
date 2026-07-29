@@ -58,4 +58,4 @@ dotnet run --project src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj -c
 
 ## 현재 보안 경계
 
-상태 API에는 비밀값이나 데이터베이스 경로를 노출하지 않는다. 등록 토큰과 운영자 생성은 HTTP API로 노출하지 않고 로컬 CLI에서만 수행하며 Agent 자격 증명 원문도 최초 응답에서만 반환한다. 대시보드와 조회 API에는 운영자 인증이 적용됐다. 아직 HTTPS와 운영용 Data Protection key 저장이 없으므로 운영 인터넷에 직접 공개하는 단계는 아니다.
+상태 API에는 비밀값이나 데이터베이스 경로를 노출하지 않는다. 등록 토큰과 운영자 생성은 HTTP API로 노출하지 않고 로컬 CLI에서만 수행하며 Agent 자격 증명 원문도 최초 응답에서만 반환한다. 대시보드와 조회 API에는 운영자 인증이 적용됐다. 외부 요청은 HTTPS를 요구하고 로그인·로그아웃에는 CSRF 검증과 운영 보안 헤더를 적용한다. 운영자 쿠키 Data Protection 키는 영구 저장되며 Windows에서는 DPAPI로 추가 보호한다. 인증서와 키 운영 절차는 [HTTPS·비밀정보 운영](SECURITY_DEPLOYMENT.md)을 따른다.

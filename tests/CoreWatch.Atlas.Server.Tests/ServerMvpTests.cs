@@ -197,7 +197,8 @@ public sealed class ServerMvpTests
             "mvp-viewer",
             "Atlas-mvp-test-password!",
             OperatorRoles.Viewer);
-        var login = await client.PostAsJsonAsync(
+        var login = await SecurityTestClient.PostAsJsonWithCsrfAsync(
+            client,
             "/api/v1/auth/login",
             new OperatorLoginRequest(
                 "mvp-viewer",
