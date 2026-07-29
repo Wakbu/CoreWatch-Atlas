@@ -15,9 +15,10 @@ Web은 HttpOnly·SameSite 쿠키로 로그인한다. Agent Bearer 인증과 운�
 
 | 메서드와 경로 | 권한 | 용도 |
 |---|---|---|
-| `POST /api/v1/auth/login` | 익명 | 운영자 로그인 |
+| `GET /api/v1/auth/csrf` | 익명 | 로그인·로그아웃용 CSRF 토큰 |
+| `POST /api/v1/auth/login` | 익명·CSRF | 운영자 로그인 |
 | `GET /api/v1/auth/me` | Viewer·Administrator | 현재 세션 |
-| `POST /api/v1/auth/logout` | Viewer·Administrator | 로그아웃 |
+| `POST /api/v1/auth/logout` | Viewer·Administrator·CSRF | 로그아웃 |
 | `GET /api/v1/operators` | Administrator | 비밀번호 해시를 제외한 운영자 목록 |
 
 공개 회원가입과 HTTP 계정 생성 API는 없다. 계정은 Server 로컬 CLI에서 생성한다. 로그인 성공·실패·잠금과 로그아웃은 비밀값 없이 감사 테이블에 기록한다.
@@ -33,7 +34,7 @@ Web은 HttpOnly·SameSite 쿠키로 로그인한다. Agent Bearer 인증과 운�
 
 이력 조회는 `fromUtc`, `toUtc`, `limit`을 지원한다. 기본 범위는 최근 24시간, 기본 제한은 200개이며 최대 1,000개다. 온라인 상태는 마지막 수신 시각이 `Atlas:ServerApi:OfflineAfterSeconds` 이내인지로 계산한다.
 
-아직 HTTPS가 구현되지 않았으므로 loopback 또는 신뢰된 사설망에서만 Server를 운영해야 한다.
+Server는 외부 HTTP를 거부하고 HTTPS를 요구한다. 개발용 loopback HTTP 예외는 운영에서 꺼야 한다. 인증서, CSRF와 비밀 저장 절차는 [HTTPS·비밀정보 운영](SECURITY_DEPLOYMENT.md)을 따른다.
 
 ## 보존 설정
 
@@ -64,4 +65,4 @@ Agent의 `Atlas:ServerTransmission`을 설정하거나 같은 이름의 환경 �
 }
 ```
 
-운영 환경에서는 자격 증명을 저장소나 배포 파일에 커밋하지 않고 환경 변수 또는 별도 비밀 저장소로 주입한다. 서버 전송 실패는 로컬 수집·JSON·Prometheus 출력을 중단시키지 않으며 다음 수집 주기에 재시도한다.
+운영 환경에서는 등록 CLI가 만든 보호 저장소를 사용한다. 자격 증명을 설정 파일이나 배포 파일에 커밋하지 않는다. 서버 전송 실패는 로컬 수집·JSON·Prometheus 출력을 중단시키지 않으며 다음 수집 주기에 재시도한다.

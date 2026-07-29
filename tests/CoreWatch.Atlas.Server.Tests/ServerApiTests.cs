@@ -118,7 +118,8 @@ public sealed class ServerApiTests
             "server-test-admin",
             "Atlas-server-test-password!",
             OperatorRoles.Administrator);
-        var response = await client.PostAsJsonAsync(
+        var response = await SecurityTestClient.PostAsJsonWithCsrfAsync(
+            client,
             "/api/v1/auth/login",
             new OperatorLoginRequest(
                 "server-test-admin",
