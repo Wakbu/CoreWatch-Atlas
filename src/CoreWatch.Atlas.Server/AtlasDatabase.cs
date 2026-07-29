@@ -9,7 +9,7 @@ namespace CoreWatch.Atlas.Server;
 
 public sealed partial class AtlasDatabase
 {
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
 
     private readonly string _connectionString;
     private readonly TimeProvider _timeProvider;
@@ -95,12 +95,14 @@ public sealed partial class AtlasDatabase
                     last_seen_at_utc TEXT NULL,
                     credential_hash BLOB NULL,
                     credential_created_at_utc TEXT NULL,
-                    credential_revoked_at_utc TEXT NULL
+                    credential_revoked_at_utc TEXT NULL,
+                    archived_at_utc TEXT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS snapshots (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    agent_id TEXT NOT NULL,
+                    agent_id TEXT NULL,
+                    retained_agent_id TEXT NULL,
                     captured_at_utc TEXT NOT NULL,
                     received_at_utc TEXT NOT NULL,
                     payload_json TEXT NOT NULL,
@@ -198,6 +200,40 @@ public sealed partial class AtlasDatabase
 
                 INSERT OR IGNORE INTO schema_migrations (version, applied_at_utc)
                     VALUES (4, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                """,
+                cancellationToken,
+                transaction);
+
+            await EnsureColumnAsync(
+                connection,
+                transaction,
+                "archived_at_utc",
+                "TEXT NULL",
+                cancellationToken);
+            await MigrateSnapshotsForRetainedHistoryAsync(
+                connection,
+                transaction,
+                cancellationToken);
+            await ExecuteNonQueryAsync(
+                connection,
+                """
+                CREATE INDEX IF NOT EXISTS ix_agents_archived_at
+                    ON agents (archived_at_utc, host_name);
+
+                CREATE TABLE IF NOT EXISTS agent_lifecycle_audit (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_id TEXT NOT NULL,
+                    operator_id TEXT NOT NULL,
+                    occurred_at_utc TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    snapshots_retained INTEGER NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS ix_agent_lifecycle_audit_agent_time
+                    ON agent_lifecycle_audit (agent_id, occurred_at_utc DESC);
+
+                INSERT OR IGNORE INTO schema_migrations (version, applied_at_utc)
+                    VALUES (5, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
                 """,
                 cancellationToken,
                 transaction);

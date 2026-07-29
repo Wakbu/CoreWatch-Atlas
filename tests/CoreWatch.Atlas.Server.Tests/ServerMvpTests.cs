@@ -178,6 +178,122 @@ public sealed class ServerMvpTests
         Assert.HasCount(1, history);
     }
 
+    [TestMethod]
+    public async Task AdministratorCanArchiveRestoreAndDeleteAgentWhileRetainingSnapshots()
+    {
+        using var fixture = new MvpFixture();
+        using var client = fixture.CreateClient();
+        var agent = await RegisterAgentAsync(fixture, client);
+        await SendSnapshotAsync(
+            client,
+            agent.AgentId,
+            agent.Credential,
+            CreateSnapshot(agent.AgentId, fixture.TimeProvider.GetUtcNow()));
+        await SignInAsAdministratorAsync(fixture, client);
+
+        var archived = await SecurityTestClient.PostWithCsrfAsync(
+            client,
+            $"/api/v1/agents/{agent.AgentId:D}/archive");
+        var activeAgents = await client.GetFromJsonAsync<AgentSummary[]>("/api/v1/agents");
+        var archivedAgents = await client.GetFromJsonAsync<AgentSummary[]>(
+            "/api/v1/agents?includeArchived=true");
+        var rejectedSnapshot = await SendSnapshotAsync(
+            client,
+            agent.AgentId,
+            agent.Credential,
+            CreateSnapshot(agent.AgentId, fixture.TimeProvider.GetUtcNow()));
+
+        Assert.AreEqual(HttpStatusCode.NoContent, archived.StatusCode);
+        Assert.HasCount(0, activeAgents!);
+        Assert.HasCount(1, archivedAgents!);
+        Assert.IsTrue(archivedAgents![0].Archived);
+        Assert.AreEqual(HttpStatusCode.Unauthorized, rejectedSnapshot.StatusCode);
+
+        var restored = await SecurityTestClient.PostWithCsrfAsync(
+            client,
+            $"/api/v1/agents/{agent.AgentId:D}/restore");
+        var restoredAgent = await client.GetFromJsonAsync<AgentSummary>(
+            $"/api/v1/agents/{agent.AgentId:D}");
+        Assert.AreEqual(HttpStatusCode.NoContent, restored.StatusCode);
+        Assert.IsFalse(restoredAgent!.Archived);
+
+        var delete = await SecurityTestClient.SendWithCsrfAsync(
+            client,
+            HttpMethod.Delete,
+            $"/api/v1/agents/{agent.AgentId:D}",
+            JsonContent.Create(new AgentDeletionRequest(DeleteSnapshots: false)));
+        Assert.AreEqual(HttpStatusCode.NoContent, delete.StatusCode);
+        var missing = await client.GetAsync(
+            $"/api/v1/agents/{agent.AgentId:D}");
+        Assert.AreEqual(HttpStatusCode.NotFound, missing.StatusCode);
+
+        await using var connection =
+            new SqliteConnection($"Data Source={fixture.DatabasePath}");
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT
+                (SELECT COUNT(*) FROM snapshots
+                    WHERE agent_id IS NULL AND retained_agent_id = $agentId),
+                (SELECT COUNT(*) FROM agent_lifecycle_audit
+                    WHERE agent_id = $agentId);
+            """;
+        command.Parameters.AddWithValue("$agentId", agent.AgentId.ToString("D"));
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.IsTrue(await reader.ReadAsync());
+        Assert.AreEqual(1L, reader.GetInt64(0));
+        Assert.AreEqual(3L, reader.GetInt64(1));
+    }
+
+    [TestMethod]
+    public async Task AdministratorCanDeleteAgentAndSnapshots()
+    {
+        using var fixture = new MvpFixture();
+        using var client = fixture.CreateClient();
+        var agent = await RegisterAgentAsync(fixture, client);
+        await SendSnapshotAsync(
+            client,
+            agent.AgentId,
+            agent.Credential,
+            CreateSnapshot(agent.AgentId, fixture.TimeProvider.GetUtcNow()));
+        await SignInAsAdministratorAsync(fixture, client);
+
+        var delete = await SecurityTestClient.SendWithCsrfAsync(
+            client,
+            HttpMethod.Delete,
+            $"/api/v1/agents/{agent.AgentId:D}",
+            JsonContent.Create(new AgentDeletionRequest(DeleteSnapshots: true)));
+        Assert.AreEqual(HttpStatusCode.NoContent, delete.StatusCode);
+
+        await using var connection =
+            new SqliteConnection($"Data Source={fixture.DatabasePath}");
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT COUNT(*) FROM snapshots WHERE retained_agent_id = $agentId OR agent_id = $agentId;";
+        command.Parameters.AddWithValue("$agentId", agent.AgentId.ToString("D"));
+        Assert.AreEqual(0L, (long)(await command.ExecuteScalarAsync())!);
+    }
+
+    private static async Task SignInAsAdministratorAsync(
+        MvpFixture fixture,
+        HttpClient client)
+    {
+        var database = fixture.Services.GetRequiredService<AtlasDatabase>();
+        await database.CreateOperatorAsync(
+            "mvp-admin",
+            "Atlas-mvp-admin-password!",
+            OperatorRoles.Administrator);
+        await SecurityTestClient.PostWithCsrfAsync(client, "/api/v1/auth/logout");
+        var login = await SecurityTestClient.PostAsJsonWithCsrfAsync(
+            client,
+            "/api/v1/auth/login",
+            new OperatorLoginRequest(
+                "mvp-admin",
+                "Atlas-mvp-admin-password!"));
+        login.EnsureSuccessStatusCode();
+    }
     private static async Task<RegisteredAgent> RegisterAgentAsync(
         MvpFixture fixture,
         HttpClient client)

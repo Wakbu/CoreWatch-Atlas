@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Mvc;
 
 const long maximumSnapshotBytes = 2 * 1024 * 1024;
 
@@ -405,16 +406,118 @@ app.MapPost(
             stored);
     });
 
+app.MapPost(
+    "/api/v1/agents/{agentId:guid}/archive",
+    async (
+        Guid agentId,
+        ClaimsPrincipal user,
+        HttpContext context,
+        IAntiforgery antiforgery,
+        AtlasDatabase storage,
+        CancellationToken cancellationToken) =>
+    {
+        if (!await ValidateAntiforgeryAsync(context, antiforgery))
+        {
+            return Results.BadRequest(new { error = "Invalid CSRF token." });
+        }
+
+        var operatorId = GetOperatorId(user);
+        if (operatorId is null)
+        {
+            return Results.Forbid();
+        }
+
+        return await storage.ArchiveAgentAsync(
+            agentId,
+            operatorId.Value,
+            cancellationToken)
+            ? Results.NoContent()
+            : Results.NotFound();
+    })
+    .RequireAuthorization(OperatorPolicies.Admin);
+
+app.MapPost(
+    "/api/v1/agents/{agentId:guid}/restore",
+    async (
+        Guid agentId,
+        ClaimsPrincipal user,
+        HttpContext context,
+        IAntiforgery antiforgery,
+        AtlasDatabase storage,
+        CancellationToken cancellationToken) =>
+    {
+        if (!await ValidateAntiforgeryAsync(context, antiforgery))
+        {
+            return Results.BadRequest(new { error = "Invalid CSRF token." });
+        }
+
+        var operatorId = GetOperatorId(user);
+        if (operatorId is null)
+        {
+            return Results.Forbid();
+        }
+
+        return await storage.RestoreAgentAsync(
+            agentId,
+            operatorId.Value,
+            cancellationToken)
+            ? Results.NoContent()
+            : Results.NotFound();
+    })
+    .RequireAuthorization(OperatorPolicies.Admin);
+
+app.MapDelete(
+    "/api/v1/agents/{agentId:guid}",
+    async (
+        Guid agentId,
+        [FromBody] AgentDeletionRequest? request,
+        ClaimsPrincipal user,
+        HttpContext context,
+        IAntiforgery antiforgery,
+        AtlasDatabase storage,
+        CancellationToken cancellationToken) =>
+    {
+        if (!await ValidateAntiforgeryAsync(context, antiforgery))
+        {
+            return Results.BadRequest(new { error = "Invalid CSRF token." });
+        }
+
+        var operatorId = GetOperatorId(user);
+        if (operatorId is null)
+        {
+            return Results.Forbid();
+        }
+
+        return await storage.DeleteAgentAsync(
+            agentId,
+            operatorId.Value,
+            request?.DeleteSnapshots ?? false,
+            cancellationToken)
+            ? Results.NoContent()
+            : Results.NotFound();
+    })
+    .RequireAuthorization(OperatorPolicies.Admin);
 app.MapGet(
     "/api/v1/agents",
     async (
+        bool? includeArchived,
+        ClaimsPrincipal user,
         AtlasDatabase storage,
         IOptions<ServerApiOptions> options,
         CancellationToken cancellationToken) =>
     {
+        var shouldIncludeArchived = includeArchived ?? false;
+        if (shouldIncludeArchived && !user.IsInRole(OperatorRoles.Administrator))
+        {
+            return Results.Forbid();
+        }
+
         var offlineAfter = TimeSpan.FromSeconds(options.Value.OfflineAfterSeconds);
         return Results.Ok(
-            await storage.ListAgentsAsync(offlineAfter, cancellationToken));
+            await storage.ListAgentsAsync(
+                offlineAfter,
+                shouldIncludeArchived,
+                cancellationToken));
     })
     .RequireAuthorization(OperatorPolicies.View);
 
@@ -477,6 +580,12 @@ app.MapGet(
 
 app.Run();
 
+static Guid? GetOperatorId(ClaimsPrincipal user) =>
+    Guid.TryParse(
+        user.FindFirstValue(ClaimTypes.NameIdentifier),
+        out var operatorId)
+        ? operatorId
+        : null;
 static async Task<bool> ValidateAntiforgeryAsync(
     HttpContext context,
     IAntiforgery antiforgery)

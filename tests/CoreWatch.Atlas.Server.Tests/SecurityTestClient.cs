@@ -23,6 +23,23 @@ internal static class SecurityTestClient
         return await client.SendAsync(request);
     }
 
+    public static async Task<HttpResponseMessage> SendWithCsrfAsync(
+        HttpClient client,
+        HttpMethod method,
+        string path,
+        HttpContent? content = null)
+    {
+        var response = await client.GetFromJsonAsync<JsonElement>(
+            "/api/v1/auth/csrf");
+        using var request = new HttpRequestMessage(method, path)
+        {
+            Content = content,
+        };
+        request.Headers.Add(
+            ServerSecurity.AntiforgeryHeaderName,
+            response.GetProperty("token").GetString());
+        return await client.SendAsync(request);
+    }
     private static async Task<HttpRequestMessage> CreatePostRequestAsync(
         HttpClient client,
         string path)

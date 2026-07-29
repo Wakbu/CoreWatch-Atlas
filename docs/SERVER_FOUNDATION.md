@@ -42,7 +42,7 @@ dotnet run --project src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj -c
 
 시작 시 데이터베이스 초기화에 실패하면 서버도 즉시 실패한다. 준비되지 않은 서버가 요청을 받지 않게 하는 fail-fast 정책이다.
 
-## SQLite 스키마 v4
+## SQLite 스키마 v5
 
 - `schema_migrations`: 적용된 스키마 버전
 - `agents`: 영구 Agent ID와 등록 당시 장비 정보
@@ -50,6 +50,8 @@ dotnet run --project src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj -c
 - `registration_tokens`: 토큰 해시, 만료·소비 시각과 발급된 Agent ID
 - `agents` 자격 증명 열: 자격 증명 해시, 생성·폐기 시각
 - `authentication_audit`: 인증 실패·교체·폐기 감사 이벤트
+- `agent_lifecycle_audit`: 관리자 Agent 보관·복원·삭제와 Snapshot 보관 여부
+- `agents.archived_at_utc`: 보관 시각, `snapshots.retained_agent_id`: Agent 삭제 후 보관한 이력
 - `atlas_operators`: 운영자 이름, 비밀번호 해시, 역할과 잠금 상태
 - `operator_authentication_audit`: 로그인 성공·실패·잠금과 로그아웃
 - `ix_snapshots_agent_captured_at`: 장비·수집 시각 기준 이력 조회

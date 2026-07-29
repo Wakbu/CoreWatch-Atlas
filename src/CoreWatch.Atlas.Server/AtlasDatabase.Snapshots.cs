@@ -82,15 +82,20 @@ public sealed partial class AtlasDatabase
 
     public Task<IReadOnlyList<AgentSummary>> ListAgentsAsync(
         TimeSpan offlineAfter,
+        bool includeArchived = false,
         CancellationToken cancellationToken = default) =>
-        ReadAgentsAsync(null, offlineAfter, cancellationToken);
+        ReadAgentsAsync(null, offlineAfter, includeArchived, cancellationToken);
 
     public async Task<AgentSummary?> GetAgentAsync(
         Guid agentId,
         TimeSpan offlineAfter,
         CancellationToken cancellationToken = default)
     {
-        var agents = await ReadAgentsAsync(agentId, offlineAfter, cancellationToken);
+        var agents = await ReadAgentsAsync(
+            agentId,
+            offlineAfter,
+            includeArchived: true,
+            cancellationToken);
         return agents.SingleOrDefault();
     }
 
@@ -143,6 +148,7 @@ public sealed partial class AtlasDatabase
     private async Task<IReadOnlyList<AgentSummary>> ReadAgentsAsync(
         Guid? agentId,
         TimeSpan offlineAfter,
+        bool includeArchived,
         CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
@@ -157,6 +163,7 @@ public sealed partial class AtlasDatabase
                 a.agent_version,
                 a.registered_at_utc,
                 a.last_seen_at_utc,
+                a.archived_at_utc,
                 s.id,
                 s.captured_at_utc,
                 s.received_at_utc,
@@ -171,11 +178,13 @@ public sealed partial class AtlasDatabase
                     LIMIT 1
                 )
             WHERE ($agentId IS NULL OR a.agent_id = $agentId)
-            ORDER BY a.host_name, a.agent_id;
+              AND ($includeArchived = 1 OR a.archived_at_utc IS NULL)
+            ORDER BY a.archived_at_utc IS NOT NULL, a.host_name, a.agent_id;
             """;
         command.Parameters.AddWithValue(
             "$agentId",
             agentId is null ? DBNull.Value : agentId.Value.ToString("D"));
+        command.Parameters.AddWithValue("$includeArchived", includeArchived ? 1 : 0);
         var onlineCutoff = _timeProvider.GetUtcNow().Subtract(offlineAfter);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -184,7 +193,9 @@ public sealed partial class AtlasDatabase
         {
             DateTimeOffset? lastSeen =
                 reader.IsDBNull(6) ? null : ParseTimestamp(reader.GetString(6));
-            var latest = reader.IsDBNull(7) ? null : ReadSnapshot(reader, 7);
+            DateTimeOffset? archivedAt =
+                reader.IsDBNull(7) ? null : ParseTimestamp(reader.GetString(7));
+            var latest = reader.IsDBNull(8) ? null : ReadSnapshot(reader, 8);
             agents.Add(new AgentSummary(
                 Guid.Parse(reader.GetString(0)),
                 reader.GetString(1),
@@ -193,7 +204,9 @@ public sealed partial class AtlasDatabase
                 reader.GetString(4),
                 ParseTimestamp(reader.GetString(5)),
                 lastSeen,
-                lastSeen >= onlineCutoff,
+                archivedAt is not null,
+                archivedAt,
+                archivedAt is null && lastSeen >= onlineCutoff,
                 latest));
         }
 
