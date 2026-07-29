@@ -100,8 +100,12 @@ static void ApplyStoredCredentials(IConfiguration configuration, StoredAgentCred
         return;
     }
 
+    var baseUrlKey = $"{ServerTransmissionOptions.SectionName}:BaseUrl";
+    var configuredBaseUrl = configuration[baseUrlKey];
     configuration[$"{ServerTransmissionOptions.SectionName}:Enabled"] = "true";
-    configuration[$"{ServerTransmissionOptions.SectionName}:BaseUrl"] = stored.BaseUrl;
+    configuration[baseUrlKey] = string.IsNullOrWhiteSpace(configuredBaseUrl)
+        ? stored.BaseUrl
+        : configuredBaseUrl;
     configuration[$"{ServerTransmissionOptions.SectionName}:AgentId"] = stored.AgentId.ToString("D");
     configuration[$"{ServerTransmissionOptions.SectionName}:Credential"] = stored.Credential;
 }

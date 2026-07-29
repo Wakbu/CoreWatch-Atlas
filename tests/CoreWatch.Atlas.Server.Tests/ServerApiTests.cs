@@ -42,6 +42,7 @@ public sealed class ServerApiTests
         var stylesheetText = await stylesheet.Content.ReadAsStringAsync();
         StringAssert.Contains(stylesheetText, ".backdrop{display:none}");
         StringAssert.Contains(stylesheetText, "--bg:#f5f6f8");
+        StringAssert.Contains(stylesheetText, "@media(max-width:1100px)");
         Assert.IsTrue(script.Content.Headers.ContentType?.MediaType?.Contains("javascript"));
         StringAssert.Contains(
             await script.Content.ReadAsStringAsync(),
