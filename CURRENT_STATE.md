@@ -83,7 +83,7 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 
 ## 다음 작업
 
-다음 구현은 `docs/NEXT_STEPS.md`의 8C다. 경고 영구 저장·알림과 Server·Agent 배포·운영 기반을 설계한다.
+다음 구현은 `docs/NEXT_STEPS.md`의 8C다. 먼저 관리자 전용 Agent 보관·복원·영구 삭제와 중복 재등록 안내를 구현하고, 이후 경고 영구 저장·알림, Server·Agent 배포와 운영 안정화를 진행한다.
 
 ## 관련 문서
 
