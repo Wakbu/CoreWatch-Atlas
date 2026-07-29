@@ -118,6 +118,9 @@ public sealed class OperatorAuthenticationTests
         var session =
             await login.Content.ReadFromJsonAsync<OperatorSessionResponse>();
         var agents = await client.GetAsync("/api/v1/agents");
+        var archive = await SecurityTestClient.PostWithCsrfAsync(
+            client,
+            "/api/v1/agents/019c16a0-5f52-7000-8000-000000000001/archive");
         var operators = await client.GetAsync("/api/v1/operators");
         var logout = await SecurityTestClient.PostWithCsrfAsync(
             client,
@@ -132,6 +135,7 @@ public sealed class OperatorAuthenticationTests
             StringComparison.OrdinalIgnoreCase);
         Assert.AreEqual(HttpStatusCode.OK, agents.StatusCode);
         Assert.AreEqual(HttpStatusCode.Forbidden, operators.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Forbidden, archive.StatusCode);
         Assert.AreEqual(HttpStatusCode.NoContent, logout.StatusCode);
         Assert.AreEqual(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
     }

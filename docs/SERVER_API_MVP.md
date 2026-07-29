@@ -23,6 +23,17 @@ Web은 HttpOnly·SameSite 쿠키로 로그인한다. Agent Bearer 인증과 운�
 
 공개 회원가입과 HTTP 계정 생성 API는 없다. 계정은 Server 로컬 CLI에서 생성한다. 로그인 성공·실패·잠금과 로그아웃은 비밀값 없이 감사 테이블에 기록한다.
 
+## Agent 수명주기
+
+`Administrator`만 다음 API를 사용할 수 있으며, 모든 변경 요청은 CSRF 토큰이 필요하다.
+
+| 메서드와 경로 | 용도 |
+|---|---|
+| `POST /api/v1/agents/{agentId}/archive` | Agent를 보관하고 현재 자격 증명을 폐기 |
+| `POST /api/v1/agents/{agentId}/restore` | 보관 해제. Agent는 새 등록으로 자격 증명을 다시 발급해야 함 |
+| `DELETE /api/v1/agents/{agentId}` | `{"deleteSnapshots":false}`면 Snapshot을 보관하고 Agent만 삭제, `true`면 이력도 삭제 |
+
+기본 `GET /api/v1/agents`는 보관 Agent를 제외한다. Administrator는 `?includeArchived=true`로 보관 항목을 함께 조회할 수 있다. 보관·복원·삭제는 `agent_lifecycle_audit`에 감사 기록을 남긴다.
 ## Snapshot API
 
 | 메서드와 경로 | 인증 | 용도 |

@@ -46,6 +46,12 @@ public sealed class ServerApiTests
         StringAssert.Contains(
             await script.Content.ReadAsStringAsync(),
             "POLL_INTERVAL_MS=15_000");
+        StringAssert.Contains(
+            await script.Content.ReadAsStringAsync(),
+            "data-lifecycle");
+        StringAssert.Contains(
+            await script.Content.ReadAsStringAsync(),
+            "chart-scale");
     }
 
     [TestMethod]
@@ -59,10 +65,10 @@ public sealed class ServerApiTests
         var status = await client.GetFromJsonAsync<JsonElement>("/api/v1/status");
 
         Assert.AreEqual("ready", ready.GetProperty("status").GetString());
-        Assert.AreEqual(4, ready.GetProperty("schemaVersion").GetInt32());
+        Assert.AreEqual(5, ready.GetProperty("schemaVersion").GetInt32());
         Assert.AreEqual("CoreWatch-Atlas.Server", status.GetProperty("service").GetString());
         Assert.AreEqual(
-            4,
+            5,
             status.GetProperty("storage").GetProperty("schemaVersion").GetInt32());
     }
 
@@ -106,7 +112,7 @@ public sealed class ServerApiTests
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM schema_migrations;";
 
-        Assert.AreEqual(4L, (long)(await command.ExecuteScalarAsync())!);
+        Assert.AreEqual(5L, (long)(await command.ExecuteScalarAsync())!);
     }
 
     private static async Task AuthenticateAsync(

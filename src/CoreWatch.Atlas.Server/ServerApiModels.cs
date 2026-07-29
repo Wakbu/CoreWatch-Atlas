@@ -15,6 +15,8 @@ public sealed record AgentSummary(
     string AgentVersion,
     DateTimeOffset RegisteredAtUtc,
     DateTimeOffset? LastSeenAtUtc,
+    bool Archived,
+    DateTimeOffset? ArchivedAtUtc,
     bool Online,
     SnapshotRecord? LatestSnapshot);
 
@@ -23,3 +25,5 @@ public sealed record SnapshotRecord(
     DateTimeOffset CapturedAtUtc,
     DateTimeOffset ReceivedAtUtc,
     JsonElement Metrics);
+
+public sealed record AgentDeletionRequest(bool DeleteSnapshots);
