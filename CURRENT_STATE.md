@@ -102,6 +102,7 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - HTTPS·비밀정보 운영: `docs/SECURITY_DEPLOYMENT.md`
 - Web 대시보드 설계: `docs/WEB_DASHBOARD_DESIGN.md`
 - Web 대시보드 MVP: `docs/WEB_DASHBOARD_MVP.md`
+- 배포·운영: `docs/DEPLOYMENT.md`
 - 다음 작업: `docs/NEXT_STEPS.md`
 ## 2026-07-28 Web UI 정합성 수정
 

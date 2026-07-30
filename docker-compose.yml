@@ -1,0 +1,14 @@
+services:
+  atlas-server:
+    build: .
+    ports:
+      - "5443:5443"
+    volumes:
+      - atlas-data:/var/lib/corewatch-atlas
+      - ./deploy/tls:/tls:ro
+    environment:
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /tls/atlas.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${ATLAS_TLS_PASSWORD}
+    restart: unless-stopped
+volumes:
+  atlas-data:
