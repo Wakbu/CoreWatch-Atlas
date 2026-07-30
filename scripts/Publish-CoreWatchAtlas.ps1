@@ -14,6 +14,12 @@ dotnet publish (Join-Path $repositoryRoot 'src/CoreWatch.Atlas.Server/CoreWatch.
 if ($LASTEXITCODE -ne 0) { throw 'Server publish failed.' }
 dotnet publish (Join-Path $repositoryRoot 'src/CoreWatch.Atlas.Agent/CoreWatch.Atlas.Agent.csproj') -c $Configuration --no-restore -o $agentOutput
 if ($LASTEXITCODE -ne 0) { throw 'Agent publish failed.' }
+$agentArchive = Join-Path $outputRoot 'corewatch-atlas-agent.zip'
+Remove-Item -LiteralPath $agentArchive -Force -ErrorAction SilentlyContinue
+Compress-Archive -Path (Join-Path $agentOutput '*') -DestinationPath $agentArchive -CompressionLevel Optimal
+$downloadDirectory = Join-Path $serverOutput 'wwwroot/downloads'
+New-Item -ItemType Directory -Force -Path $downloadDirectory | Out-Null
+Copy-Item -LiteralPath $agentArchive -Destination (Join-Path $downloadDirectory 'corewatch-atlas-agent.zip') -Force
 foreach ($name in @('server', 'agent')) {
   $source = Join-Path $stagingRoot $name
   $archive = Join-Path $outputRoot "corewatch-atlas-$name.zip"

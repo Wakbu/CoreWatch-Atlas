@@ -40,6 +40,14 @@ builder.Services
         "TokenLifetimeMinutes must be between 1 and 1440.")
     .ValidateOnStart();
 builder.Services
+    .AddOptions<AgentInstallerOptions>()
+    .Bind(builder.Configuration.GetSection(AgentInstallerOptions.SectionName))
+    .Validate(
+        options => Uri.TryCreate(options.AgentPackagePath, UriKind.Relative, out var path)
+            && path.OriginalString.StartsWith("/", StringComparison.Ordinal),
+        "AgentPackagePath must be an absolute application path.")
+    .ValidateOnStart();
+builder.Services
     .AddOptions<ServerApiOptions>()
     .Bind(builder.Configuration.GetSection(ServerApiOptions.SectionName))
     .Validate(
@@ -160,6 +168,50 @@ app.MapGet(
         return Results.Ok(new { token = tokens.RequestToken });
     });
 
+
+app.MapPost(
+    "/api/v1/agent-installers/token",
+    async (
+        HttpContext context,
+        IAntiforgery antiforgery,
+        AtlasDatabase storage,
+        IOptions<RegistrationOptions> options) =>
+    {
+        if (!await ValidateAntiforgeryAsync(context, antiforgery))
+        {
+            return Results.BadRequest(new { error = "Invalid CSRF token." });
+        }
+
+        var issued = await storage.CreateRegistrationTokenAsync(
+            TimeSpan.FromMinutes(options.Value.TokenLifetimeMinutes));
+        context.Response.Headers.CacheControl = "no-store";
+        return Results.Ok(issued);
+    })
+    .RequireAuthorization(OperatorPolicies.Admin);
+
+app.MapGet(
+    "/install/windows.ps1",
+    (HttpContext context, IOptions<AgentInstallerOptions> options) =>
+    {
+        var serverUrl = GetPublicServerUrl(context);
+        return Results.Text(
+            BuildWindowsInstallerScript(
+                serverUrl,
+                serverUrl + options.Value.AgentPackagePath),
+            "text/plain; charset=utf-8");
+    });
+
+app.MapGet(
+    "/install/linux.sh",
+    (HttpContext context, IOptions<AgentInstallerOptions> options) =>
+    {
+        var serverUrl = GetPublicServerUrl(context);
+        return Results.Text(
+            BuildLinuxInstallerScript(
+                serverUrl,
+                serverUrl + options.Value.AgentPackagePath),
+            "text/plain; charset=utf-8");
+    });
 app.MapPost(
     "/api/v1/auth/login",
     async (
@@ -593,6 +645,70 @@ app.MapGet(
     .RequireAuthorization(OperatorPolicies.View);
 
 app.Run();
+static string GetPublicServerUrl(HttpContext context) =>
+    $"{context.Request.Scheme}://{context.Request.Host}";
+
+static string BuildWindowsInstallerScript(string serverUrl, string packageUrl) =>
+    """
+    $ErrorActionPreference = 'Stop'
+    if (-not $env:COREWATCH_ATLAS_REGISTRATION_TOKEN) { throw 'COREWATCH_ATLAS_REGISTRATION_TOKEN is required.' }
+    if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Run this command in an elevated PowerShell session.' }
+    $root = Join-Path $env:ProgramFiles 'CoreWatch-Atlas\\Agent'
+    $zip = Join-Path $env:TEMP 'corewatch-atlas-agent.zip'
+    New-Item -ItemType Directory -Force -Path $root | Out-Null
+    Invoke-WebRequest -UseBasicParsing -Uri '__PACKAGE_URL__' -OutFile $zip
+    Expand-Archive -LiteralPath $zip -DestinationPath $root -Force
+    $dotnet = (Get-Command dotnet -ErrorAction SilentlyContinue).Source
+    if (-not $dotnet) { throw '.NET 10 runtime is required. Install it, then rerun this command.' }
+    & $dotnet (Join-Path $root 'CoreWatch.Atlas.Agent.dll') --register-agent '__SERVER_URL__'
+    $service = 'CoreWatchAtlasAgent'
+    if (Get-Service -Name $service -ErrorAction SilentlyContinue) { Stop-Service $service -Force; sc.exe delete $service | Out-Null; Start-Sleep -Seconds 1 }
+    $binary = ('"{0}" "{1}"' -f $dotnet, (Join-Path $root 'CoreWatch.Atlas.Agent.dll'))
+    New-Service -Name $service -BinaryPathName $binary -DisplayName 'CoreWatch Atlas Agent' -StartupType Automatic | Out-Null
+    Start-Service $service
+    Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
+    Write-Host 'CoreWatch Atlas Agent installation completed.'
+    """
+    .Replace("__SERVER_URL__", serverUrl, StringComparison.Ordinal)
+    .Replace("__PACKAGE_URL__", packageUrl, StringComparison.Ordinal);
+
+static string BuildLinuxInstallerScript(string serverUrl, string packageUrl) =>
+    """
+    #!/usr/bin/env bash
+    set -euo pipefail
+    : "${COREWATCH_ATLAS_REGISTRATION_TOKEN:?COREWATCH_ATLAS_REGISTRATION_TOKEN is required}"
+    if [ "$(id -u)" -ne 0 ]; then echo 'Run this command with sudo.' >&2; exit 1; fi
+    command -v curl >/dev/null || { echo 'curl is required.' >&2; exit 1; }
+    command -v unzip >/dev/null || { echo 'unzip is required.' >&2; exit 1; }
+    command -v dotnet >/dev/null || { echo '.NET 10 runtime is required. Install it, then rerun this command.' >&2; exit 1; }
+    root=/opt/corewatch-atlas-agent
+    state=/var/lib/corewatch-atlas-agent
+    zip=$(mktemp)
+    install -d -m 0755 "$root" "$state"
+    curl --fail --location --silent --show-error '__PACKAGE_URL__' -o "$zip"
+    unzip -oq "$zip" -d "$root"
+    rm -f "$zip"
+    Atlas__CredentialStore__Path="$state" dotnet "$root/CoreWatch.Atlas.Agent.dll" --register-agent '__SERVER_URL__'
+    cat >/etc/systemd/system/corewatch-atlas-agent.service <<'UNIT'
+    [Unit]
+    Description=CoreWatch Atlas Agent
+    After=network-online.target
+    Wants=network-online.target
+    [Service]
+    Type=simple
+    Environment=Atlas__CredentialStore__Path=/var/lib/corewatch-atlas-agent
+    ExecStart=/usr/bin/dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll
+    Restart=always
+    RestartSec=5
+    [Install]
+    WantedBy=multi-user.target
+    UNIT
+    systemctl daemon-reload
+    systemctl enable --now corewatch-atlas-agent
+    echo 'CoreWatch Atlas Agent installation completed.'
+    """
+    .Replace("__SERVER_URL__", serverUrl, StringComparison.Ordinal)
+    .Replace("__PACKAGE_URL__", packageUrl, StringComparison.Ordinal);
 
 static Guid? GetOperatorId(ClaimsPrincipal user) =>
     Guid.TryParse(

@@ -120,3 +120,10 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - 기존 CoreWatch 개인 사용자판의 밝은 캔버스, 흰 패널, 짙은 사이드바와 자원별 포인트 색상을 Atlas Web에 반영했다.
 - 정적 자산 테스트에 데스크톱 backdrop 숨김과 CoreWatch 배경 토큰 회귀 검사를 추가했다.
 - Web 대시보드는 표시 중일 때 15초마다 자동 갱신하고, 숨겨진 탭으로 복귀하면 즉시 최신 Snapshot을 조회한다.
+
+## 2026-07-30 Agent installer enrollment
+
+- Administrator-only `#/enroll` page issues a one-time, 15-minute registration token only after explicit action and provides a copyable Windows or Linux installation command.
+- `/install/windows.ps1` and `/install/linux.sh` download the packaged Agent, register it, persist its credential, and configure an automatic Windows service or systemd service.
+- Release Server package now embeds `wwwroot/downloads/corewatch-atlas-agent.zip`; installer bootstrap scripts use the same HTTPS Server origin, so no third-party package URL or long-lived credential is exposed.
+- Verified Debug/Release builds and 70 automated tests; package inspection confirmed the embedded Agent ZIP and SHA-256 output.

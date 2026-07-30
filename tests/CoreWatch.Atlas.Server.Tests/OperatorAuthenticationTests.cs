@@ -141,6 +141,27 @@ public sealed class OperatorAuthenticationTests
     }
 
     [TestMethod]
+    public async Task OnlyAdministratorCanIssueOneTimeAgentInstallerToken()
+    {
+        using var fixture = new OperatorFixture();
+        using var adminClient = fixture.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        using var viewerClient = fixture.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var database = fixture.Services.GetRequiredService<AtlasDatabase>();
+        await database.CreateOperatorAsync("installer-admin", TestPassword, OperatorRoles.Administrator);
+        await database.CreateOperatorAsync("installer-viewer", TestPassword, OperatorRoles.Viewer);
+        await LoginAsync(adminClient, "installer-admin", TestPassword);
+        await LoginAsync(viewerClient, "installer-viewer", TestPassword);
+        var issued = await SecurityTestClient.PostWithCsrfAsync(adminClient, "/api/v1/agent-installers/token");
+        var denied = await SecurityTestClient.PostWithCsrfAsync(viewerClient, "/api/v1/agent-installers/token");
+        var token = await issued.Content.ReadFromJsonAsync<IssuedRegistrationToken>();
+
+        Assert.AreEqual(HttpStatusCode.OK, issued.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Forbidden, denied.StatusCode);
+        StringAssert.StartsWith(token?.Value, "catlas_reg_");
+        Assert.IsNotNull(token);
+        Assert.IsTrue(token.ExpiresAtUtc > fixture.TimeProvider.GetUtcNow());
+    }
+    [TestMethod]
     public async Task AdministratorCanListOperatorsWithoutPasswordHashes()
     {
         using var fixture = new OperatorFixture();
