@@ -142,3 +142,9 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - Automated tests cover invalid manifests, checksum failure, unsafe ZIP paths, replacement/data preservation, rollback and database transitions.
 - Remaining release work: publish new Server/Agent packages, deploy to `100.95.44.33`, and verify real Windows/Linux service updates before declaring production rollout complete.
 - Enrollment UI still needs visual review. User wants full-width polished OS card design with real Windows/Linux logos; last CSS change simplified command area. Do not rely only on browser cache—verify actual compressed static assets.
+
+## 2026-07-30 self-signed Agent enrollment bootstrap
+
+- Linux enrollment now obtains the public Server certificate only for the initial bootstrap, installs it into the Ubuntu/Debian trust store, then verifies the installer, package and Agent registration with that certificate.
+- Windows enrollment imports the public certificate into the elevated Local Machine root store before fetching the installer.
+- The Server exports the configured public Kestrel certificate at `/install/atlas-ca.crt`; this endpoint contains no private key or password.

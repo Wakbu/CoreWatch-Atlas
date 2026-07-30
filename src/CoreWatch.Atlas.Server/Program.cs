@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using CoreWatch.Atlas.Contracts;
 using CoreWatch.Atlas.Server;
 using Microsoft.AspNetCore.Antiforgery;
@@ -210,6 +211,32 @@ app.MapGet(
                 serverUrl,
                 serverUrl + options.Value.AgentPackagePath),
             "text/plain; charset=utf-8");
+    });
+
+app.MapGet(
+    "/install/atlas-ca.crt",
+    (IConfiguration configuration) =>
+    {
+        var certificatePath = configuration[
+            "Kestrel:Certificates:Default:Path"]
+            ?? configuration["ASPNETCORE_Kestrel__Certificates__Default__Path"];
+        var certificatePassword = configuration[
+            "Kestrel:Certificates:Default:Password"]
+            ?? configuration["ASPNETCORE_Kestrel__Certificates__Default__Password"];
+        if (string.IsNullOrWhiteSpace(certificatePath)
+            || !File.Exists(certificatePath))
+        {
+            return Results.NotFound();
+        }
+
+        using var certificate = X509CertificateLoader.LoadPkcs12FromFile(
+            certificatePath,
+            certificatePassword,
+            X509KeyStorageFlags.EphemeralKeySet);
+        return Results.File(
+            certificate.Export(X509ContentType.Cert),
+            "application/x-x509-ca-cert",
+            "atlas-ca.crt");
     });
 
 app.MapGet(
@@ -823,17 +850,22 @@ static string BuildLinuxInstallerScript(string serverUrl, string packageUrl) =>
     #!/usr/bin/env bash
     set -euo pipefail
     : "${COREWATCH_ATLAS_REGISTRATION_TOKEN:?COREWATCH_ATLAS_REGISTRATION_TOKEN is required}"
+    : "${COREWATCH_ATLAS_CA_CERT:?COREWATCH_ATLAS_CA_CERT is required}"
     if [ "$(id -u)" -ne 0 ]; then echo 'Run this command with sudo.' >&2; exit 1; fi
     command -v curl >/dev/null || { echo 'curl is required.' >&2; exit 1; }
     command -v unzip >/dev/null || { echo 'unzip is required.' >&2; exit 1; }
     command -v dotnet >/dev/null || { echo '.NET 10 runtime is required. Install it, then rerun this command.' >&2; exit 1; }
+    command -v update-ca-certificates >/dev/null || { echo 'update-ca-certificates is required (Ubuntu/Debian).' >&2; exit 1; }
+    test -r "$COREWATCH_ATLAS_CA_CERT" || { echo 'The Atlas CA certificate is unreadable.' >&2; exit 1; }
     root=/opt/corewatch-atlas-agent
     state=/var/lib/corewatch-atlas-agent
     zip=$(mktemp)
+    trap 'rm -f "$zip"' EXIT
+    install -m 0644 "$COREWATCH_ATLAS_CA_CERT" /usr/local/share/ca-certificates/corewatch-atlas.crt
+    update-ca-certificates >/dev/null
     install -d -m 0755 "$root" "$state"
-    curl --fail --location --silent --show-error '__PACKAGE_URL__' -o "$zip"
+    curl --fail --location --silent --show-error --cacert "$COREWATCH_ATLAS_CA_CERT" '__PACKAGE_URL__' -o "$zip"
     unzip -oq "$zip" -d "$root"
-    rm -f "$zip"
     Atlas__CredentialStore__Path="$state" dotnet "$root/CoreWatch.Atlas.Agent.dll" --register-agent '__SERVER_URL__'
     cat >/etc/systemd/system/corewatch-atlas-agent.service <<'UNIT'
     [Unit]

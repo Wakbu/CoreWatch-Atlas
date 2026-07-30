@@ -152,3 +152,4 @@ Windows API 기반 기본 지표와 Windows 실환경 검증을 구현했다.
 1. Publish a new release with Server/Agent ZIP + SHA-256.
 2. Deploy Server to `100.95.44.33` and verify a real Windows and Linux Agent update.
 3. Recheck enrollment UI on production after static asset compression/cache handling.
+4. Verify the one-command self-signed CA bootstrap on a fresh Ubuntu/Debian Agent before broader rollout.
