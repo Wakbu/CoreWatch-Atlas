@@ -1,6 +1,6 @@
 # CoreWatch-Atlas 현재 상태
 
-마지막 갱신: 2026-07-29
+마지막 갱신: 2026-07-30
 새 채팅이나 작업자는 이 문서, `AGENTS.md`, `docs/NEXT_STEPS.md`와 관련 설계를 먼저 읽는다.
 
 ## 제품 경계
@@ -84,11 +84,12 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - Agent를 영구 삭제하면서 보관한 Snapshot은 감사·보존 목적의 데이터이며, 독립 조회·복원 UI는 후속 단계다.
 - Linux Data Protection 키는 소유자 전용 디렉터리로 제한되지만 별도 KMS 암호화는 배포 환경에서 구성해야 한다.
 - Prometheus endpoint에는 인증·TLS가 없으므로 기본 loopback을 유지하거나 사설망·방화벽으로 보호해야 한다.
-- 정식 Release와 설치·서비스 패키지는 없다.
+- Docker CLI가 이 개발 PC에 없어 실제 컨테이너 build/run은 아직 검증하지 못했다.
+- 실제 Windows/Linux 서비스 등록은 대상 호스트의 관리자 권한으로 수행·검증해야 한다.
 
 ## 다음 작업
 
-다음 구현은 `docs/NEXT_STEPS.md`의 8C 배포 단계다. Server·Agent 서비스 패키지와 컨테이너 배포를 구현한다.
+1.0.0 구현 범위는 완료했다. 다음은 Docker 실구동, 대상 Windows·Linux 서비스 설치 및 운영 인수 검증 후 1.0.0 Release 태그·자산을 발행하는 절차다.
 
 ## 관련 문서
 
@@ -104,6 +105,12 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - Web 대시보드 MVP: `docs/WEB_DASHBOARD_MVP.md`
 - 배포·운영: `docs/DEPLOYMENT.md`
 - 다음 작업: `docs/NEXT_STEPS.md`
+## 2026-07-30 Release 준비 검증
+
+- Server·Agent framework-dependent ZIP과 SHA-256 생성 스크립트를 추가하고, 게시된 Server를 임시 포트에서 실행해 `/health/ready`를 확인했다.
+- SQLite DB·Data Protection 키 백업 스크립트가 WAL/SHM 동반 파일 및 모든 파일의 SHA-256 목록을 보관하도록 보강했고 임시 복구 산출물로 확인했다.
+- Debug/Release 빌드와 69개 자동 테스트를 통과했다. HTTPS 미리보기 Server와 기존 등록 Agent를 재시작했다.
+
 ## 2026-07-28 Web UI 정합성 수정
 
 - 인증 추가 후 드러난 데스크톱 Grid 자동 배치 충돌을 수정해 본문이 사이드바 아래로 밀리지 않게 했다.

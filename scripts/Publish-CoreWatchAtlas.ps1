@@ -1,0 +1,24 @@
+param(
+  [Parameter(Mandatory=$true)][string]$OutputDirectory,
+  [string]$Configuration = 'Release'
+)
+$ErrorActionPreference = 'Stop'
+$repositoryRoot = Split-Path -Parent $PSScriptRoot
+$outputRoot = [IO.Path]::GetFullPath($OutputDirectory)
+$stagingRoot = Join-Path $outputRoot 'staging'
+$serverOutput = Join-Path $stagingRoot 'server'
+$agentOutput = Join-Path $stagingRoot 'agent'
+Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $serverOutput, $agentOutput | Out-Null
+dotnet publish (Join-Path $repositoryRoot 'src/CoreWatch.Atlas.Server/CoreWatch.Atlas.Server.csproj') -c $Configuration --no-restore -o $serverOutput
+if ($LASTEXITCODE -ne 0) { throw 'Server publish failed.' }
+dotnet publish (Join-Path $repositoryRoot 'src/CoreWatch.Atlas.Agent/CoreWatch.Atlas.Agent.csproj') -c $Configuration --no-restore -o $agentOutput
+if ($LASTEXITCODE -ne 0) { throw 'Agent publish failed.' }
+foreach ($name in @('server', 'agent')) {
+  $source = Join-Path $stagingRoot $name
+  $archive = Join-Path $outputRoot "corewatch-atlas-$name.zip"
+  Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
+  Compress-Archive -Path (Join-Path $source '*') -DestinationPath $archive -CompressionLevel Optimal
+  Get-FileHash -LiteralPath $archive -Algorithm SHA256 | Select-Object Algorithm, Hash, Path | Format-List | Out-File -LiteralPath "$archive.sha256.txt" -Encoding utf8
+}
+Write-Host "Published packages: $outputRoot"
