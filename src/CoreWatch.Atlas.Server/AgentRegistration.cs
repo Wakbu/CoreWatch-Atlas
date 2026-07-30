@@ -5,7 +5,8 @@ public sealed record AgentRegistrationRequest(
     string HostName,
     string OperatingSystem,
     string Architecture,
-    string AgentVersion);
+    string AgentVersion,
+    Guid? ExistingAgentId = null);
 
 public sealed record RegisteredAgent(
     Guid AgentId,

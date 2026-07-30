@@ -111,6 +111,7 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - SQLite DB·Data Protection 키 백업 스크립트가 WAL/SHM 동반 파일 및 모든 파일의 SHA-256 목록을 보관하도록 보강했고 임시 복구 산출물로 확인했다.
 - Debug/Release 빌드와 69개 자동 테스트를 통과했다. HTTPS 미리보기 Server와 기존 등록 Agent를 재시작했다.
 - 자동 갱신이 경고·설정 화면을 기본 placeholder로 덮어쓰지 않도록 render 완료 이벤트를 연결하고 정적 자산 회귀 검사를 추가했다.
+- 일회성 등록 토큰으로 기존 Agent ID의 자격 증명만 재발급해, 자격 증명 불일치 복구 시 중복 Agent를 만들지 않도록 했다.
 
 ## 2026-07-28 Web UI 정합성 수정
 
@@ -119,3 +120,10 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - 기존 CoreWatch 개인 사용자판의 밝은 캔버스, 흰 패널, 짙은 사이드바와 자원별 포인트 색상을 Atlas Web에 반영했다.
 - 정적 자산 테스트에 데스크톱 backdrop 숨김과 CoreWatch 배경 토큰 회귀 검사를 추가했다.
 - Web 대시보드는 표시 중일 때 15초마다 자동 갱신하고, 숨겨진 탭으로 복귀하면 즉시 최신 Snapshot을 조회한다.
+
+## 2026-07-30 Agent installer enrollment
+
+- Administrator-only `#/enroll` page issues a one-time, 15-minute registration token only after explicit action and provides a copyable Windows or Linux installation command.
+- `/install/windows.ps1` and `/install/linux.sh` download the packaged Agent, register it, persist its credential, and configure an automatic Windows service or systemd service.
+- Release Server package now embeds `wwwroot/downloads/corewatch-atlas-agent.zip`; installer bootstrap scripts use the same HTTPS Server origin, so no third-party package URL or long-lived credential is exposed.
+- Verified Debug/Release builds and 70 automated tests; package inspection confirmed the embedded Agent ZIP and SHA-256 output.

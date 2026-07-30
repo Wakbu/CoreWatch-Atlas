@@ -131,3 +131,9 @@ Windows API 기반 기본 지표와 Windows 실환경 검증을 구현했다.
 - Windows·Ubuntu GitHub Actions 통과
 - 상태·관련 문서 갱신
 - 별도 브랜치와 PR, 검증 후 자동 squash 병합·동기화
+
+## 2026-07-30 Agent web enrollment (completed)
+
+- Add the Administrator-only Agent enrollment page and one-time installation token flow.
+- Package the Agent ZIP inside the Server release so Windows/Linux bootstrap scripts can install from the same HTTPS origin.
+- Before publishing 1.0.0, run the release workflow, validate the published Server package and smoke-test a real Windows/Linux service installation.
