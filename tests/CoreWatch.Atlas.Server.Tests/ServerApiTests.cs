@@ -34,6 +34,7 @@ public sealed class ServerApiTests
         var dashboard = await client.GetAsync("/");
         var stylesheet = await client.GetAsync("/css/atlas.css");
         var script = await client.GetAsync("/js/atlas.js");
+        var alertScript = await client.GetAsync("/js/alerts.js");
 
         Assert.AreEqual(HttpStatusCode.OK, dashboard.StatusCode);
         Assert.AreEqual("text/html", dashboard.Content.Headers.ContentType?.MediaType);
@@ -54,6 +55,9 @@ public sealed class ServerApiTests
         StringAssert.Contains(
             await script.Content.ReadAsStringAsync(),
             "chart-scale");
+        StringAssert.Contains(await script.Content.ReadAsStringAsync(), "atlas:render");
+        Assert.IsTrue(alertScript.Content.Headers.ContentType?.MediaType?.Contains("javascript"));
+        StringAssert.Contains(await alertScript.Content.ReadAsStringAsync(), "atlas:render");
     }
 
         [TestMethod]

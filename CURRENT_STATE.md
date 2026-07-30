@@ -110,6 +110,7 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - Server·Agent framework-dependent ZIP과 SHA-256 생성 스크립트를 추가하고, 게시된 Server를 임시 포트에서 실행해 `/health/ready`를 확인했다.
 - SQLite DB·Data Protection 키 백업 스크립트가 WAL/SHM 동반 파일 및 모든 파일의 SHA-256 목록을 보관하도록 보강했고 임시 복구 산출물로 확인했다.
 - Debug/Release 빌드와 69개 자동 테스트를 통과했다. HTTPS 미리보기 Server와 기존 등록 Agent를 재시작했다.
+- 자동 갱신이 경고·설정 화면을 기본 placeholder로 덮어쓰지 않도록 render 완료 이벤트를 연결하고 정적 자산 회귀 검사를 추가했다.
 
 ## 2026-07-28 Web UI 정합성 수정
 
