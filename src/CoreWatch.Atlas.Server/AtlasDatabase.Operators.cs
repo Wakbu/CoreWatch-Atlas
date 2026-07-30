@@ -6,6 +6,14 @@ namespace CoreWatch.Atlas.Server;
 
 public sealed partial class AtlasDatabase
 {
+    public async Task<bool> HasOperatorsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT EXISTS(SELECT 1 FROM atlas_operators);";
+        return Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken)) != 0;
+    }
     public async Task<OperatorIdentity> CreateOperatorAsync(
         string username,
         string password,

@@ -212,6 +212,57 @@ app.MapGet(
                 serverUrl + options.Value.AgentPackagePath),
             "text/plain; charset=utf-8");
     });
+app.MapGet(
+    "/api/v1/auth/setup-status",
+    async (AtlasDatabase storage, CancellationToken cancellationToken) =>
+        Results.Ok(new { required = !await storage.HasOperatorsAsync(cancellationToken) }));
+
+app.MapPost(
+    "/api/v1/auth/setup",
+    async (
+        InitialOperatorSetupRequest request,
+        HttpContext context,
+        IAntiforgery antiforgery,
+        AtlasDatabase storage,
+        CancellationToken cancellationToken) =>
+    {
+        if (!await ValidateAntiforgeryAsync(context, antiforgery))
+        {
+            return Results.BadRequest(new { error = "Invalid CSRF token." });
+        }
+
+        if (await storage.HasOperatorsAsync(cancellationToken))
+        {
+            return Results.Conflict(new { error = "Initial setup has already been completed." });
+        }
+
+        try
+        {
+            var identity = await storage.CreateOperatorAsync(
+                request.Username,
+                request.Password,
+                OperatorRoles.Administrator,
+                cancellationToken);
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, identity.OperatorId.ToString("D")),
+                new Claim(ClaimTypes.Name, identity.Username),
+                new Claim(ClaimTypes.Role, identity.Role),
+            };
+            await context.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)));
+            return Results.Created("/api/v1/operators", new OperatorSessionResponse(identity.Username, identity.Role));
+        }
+        catch (ArgumentException exception)
+        {
+            return Results.BadRequest(new { error = exception.Message });
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.Conflict(new { error = "Initial setup has already been completed." });
+        }
+    });
 app.MapPost(
     "/api/v1/auth/login",
     async (
