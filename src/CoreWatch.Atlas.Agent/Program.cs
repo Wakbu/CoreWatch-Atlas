@@ -35,6 +35,7 @@ if (rotateCredential)
 ApplyStoredCredentials(builder.Configuration, credentialStore.Load());
 if (OperatingSystem.IsWindows())
 {
+    builder.Services.AddWindowsService(options => options.ServiceName = "CoreWatch Atlas Agent");
     builder.Services.AddAtlasMetricsCollection<WindowsSystemMetricsCollector>(builder.Configuration);
 }
 else if (OperatingSystem.IsLinux())

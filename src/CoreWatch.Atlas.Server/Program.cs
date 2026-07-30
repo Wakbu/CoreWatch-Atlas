@@ -860,6 +860,7 @@ static string BuildWindowsInstallerScript(string serverUrl, string packageUrl) =
     Expand-Archive -LiteralPath $zip -DestinationPath $root -Force
     $dotnet = (Get-Command dotnet -ErrorAction SilentlyContinue).Source
     if (-not $dotnet) { throw '.NET 10 runtime is required. Install it, then rerun this command.' }
+    Remove-Item -LiteralPath (Join-Path $root 'data\agent-credentials') -Recurse -Force -ErrorAction SilentlyContinue
     & $dotnet (Join-Path $root 'CoreWatch.Atlas.Agent.dll') --register-agent '__SERVER_URL__'
     $service = 'CoreWatchAtlasAgent'
     if (Get-Service -Name $service -ErrorAction SilentlyContinue) { Stop-Service $service -Force; sc.exe delete $service | Out-Null; Start-Sleep -Seconds 1 }
@@ -885,7 +886,16 @@ static string BuildLinuxInstallerScript(string serverUrl, string packageUrl) =>
       apt-get update
       DEBIAN_FRONTEND=noninteractive apt-get install -y unzip
     fi
-    command -v dotnet >/dev/null || { echo '.NET 10 runtime is required. Install it, then rerun this command.' >&2; exit 1; }
+    if ! command -v dotnet >/dev/null || ! dotnet --list-runtimes | grep -q '^Microsoft.AspNetCore.App 10\.'; then
+      command -v apt-get >/dev/null || { echo '.NET 10 runtime is required.' >&2; exit 1; }
+      apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl tar
+      install_dir=/usr/local/lib/corewatch-dotnet
+      curl --fail --location --silent --show-error https://dot.net/v1/dotnet-install.sh -o /tmp/corewatch-dotnet-install.sh
+      bash /tmp/corewatch-dotnet-install.sh --runtime aspnetcore --channel 10.0 --install-dir "$install_dir" --no-path
+      ln -sfn "$install_dir/dotnet" /usr/local/bin/dotnet
+      rm -f /tmp/corewatch-dotnet-install.sh
+    fi
     command -v update-ca-certificates >/dev/null || { echo 'update-ca-certificates is required (Ubuntu/Debian).' >&2; exit 1; }
     test -r "$COREWATCH_ATLAS_CA_CERT" || { echo 'The Atlas CA certificate is unreadable.' >&2; exit 1; }
     root=/opt/corewatch-atlas-agent
@@ -896,7 +906,8 @@ static string BuildLinuxInstallerScript(string serverUrl, string packageUrl) =>
     update-ca-certificates >/dev/null
     install -d -m 0755 "$root" "$state"
     curl --fail --location --silent --show-error --cacert "$COREWATCH_ATLAS_CA_CERT" '__PACKAGE_URL__' -o "$zip"
-    unzip -oq "$zip" -d "$root"
+    unzip -oq "$zip" -d "$root" || test -f "$root/CoreWatch.Atlas.Agent.dll"
+    find "$root/runtimes" -type f -name '*.so' -exec chmod 755 {} \;
     Atlas__CredentialStore__Path="$state" dotnet "$root/CoreWatch.Atlas.Agent.dll" --register-agent '__SERVER_URL__'
     cat >/etc/systemd/system/corewatch-atlas-agent.service <<'UNIT'
     [Unit]
@@ -907,8 +918,8 @@ static string BuildLinuxInstallerScript(string serverUrl, string packageUrl) =>
     Type=simple
     Environment=Atlas__CredentialStore__Path=/var/lib/corewatch-atlas-agent
     Environment=Atlas__AutomaticUpdate__StatePath=/var/lib/corewatch-atlas-agent/updates
-    ExecStart=/usr/bin/dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll
-    ExecStopPost=+/bin/sh -c 'test ! -f /var/lib/corewatch-atlas-agent/updates/pending-handoff.json || exec /usr/bin/dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll --apply-agent-update /var/lib/corewatch-atlas-agent/updates/pending-handoff.json'
+    ExecStart=/usr/bin/env dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll
+    ExecStopPost=+/bin/sh -c 'test ! -f /var/lib/corewatch-atlas-agent/updates/pending-handoff.json || exec /usr/bin/env dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll --apply-agent-update /var/lib/corewatch-atlas-agent/updates/pending-handoff.json'
     Restart=on-failure
     RestartSec=30
     [Install]
