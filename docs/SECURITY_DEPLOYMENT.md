@@ -64,3 +64,5 @@ dotnet run --project src/CoreWatch.Atlas.Agent/CoreWatch.Atlas.Agent.csproj -c R
 - Server와 Agent를 각각 고정된 최소 권한 계정으로 실행한다.
 - Data Protection 키와 SQLite DB의 백업·복원 절차를 함께 시험한다.
 - Prometheus endpoint를 활성화한다면 loopback 또는 별도 인증·TLS 프록시로 제한한다.
+
+기존 Agent 저장소에 자격 증명이 있으면 `--register-agent`는 유효한 일회성 등록 토큰으로 같은 Agent ID의 자격 증명만 재발급한다. 이 복구 경로는 중복 Agent를 만들지 않는다.

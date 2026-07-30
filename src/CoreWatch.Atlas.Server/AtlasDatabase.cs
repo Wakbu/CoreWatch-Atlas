@@ -314,7 +314,7 @@ public sealed partial class AtlasDatabase
         CancellationToken cancellationToken = default)
     {
         var now = _timeProvider.GetUtcNow();
-        var agentId = Guid.CreateVersion7(now);
+        var agentId = request.ExistingAgentId ?? Guid.CreateVersion7(now);
         var tokenHash = HashToken(request.RegistrationToken);
         var credential = CreateAgentCredential();
         var credentialHash = HashToken(credential);
@@ -344,6 +344,33 @@ public sealed partial class AtlasDatabase
             return null;
         }
 
+        if (request.ExistingAgentId is not null)
+        {
+            await using var repairCommand = connection.CreateCommand();
+            repairCommand.Transaction = transaction;
+            repairCommand.CommandText = """
+                UPDATE agents
+                SET host_name = $hostName, operating_system = $operatingSystem,
+                    architecture = $architecture, agent_version = $agentVersion,
+                    credential_hash = $credentialHash, credential_created_at_utc = $credentialCreatedAtUtc,
+                    credential_revoked_at_utc = NULL
+                WHERE agent_id = $agentId AND archived_at_utc IS NULL;
+                """;
+            repairCommand.Parameters.AddWithValue("$agentId", agentId.ToString("D"));
+            repairCommand.Parameters.AddWithValue("$hostName", request.HostName);
+            repairCommand.Parameters.AddWithValue("$operatingSystem", request.OperatingSystem);
+            repairCommand.Parameters.AddWithValue("$architecture", request.Architecture);
+            repairCommand.Parameters.AddWithValue("$agentVersion", request.AgentVersion);
+            repairCommand.Parameters.Add("$credentialHash", SqliteType.Blob).Value = credentialHash;
+            repairCommand.Parameters.AddWithValue("$credentialCreatedAtUtc", FormatTimestamp(now));
+            if (await repairCommand.ExecuteNonQueryAsync(cancellationToken) != 1)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return null;
+            }
+            await transaction.CommitAsync(cancellationToken);
+            return new RegisteredAgent(agentId, now, credential);
+        }
         await using var insertCommand = connection.CreateCommand();
         insertCommand.Transaction = transaction;
         insertCommand.CommandText =

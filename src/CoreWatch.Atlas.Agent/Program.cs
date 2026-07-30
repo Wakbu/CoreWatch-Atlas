@@ -59,6 +59,7 @@ static async Task RegisterAgentAsync(string baseUrl, AgentCredentialStore creden
     Environment.SetEnvironmentVariable(
         "COREWATCH_ATLAS_REGISTRATION_TOKEN",
         null);
+    var existing = credentialStore.Load();
     using var client = CreateAdministrationClient(serverUri!);
     using var response = await client.PostAsJsonAsync(
         "api/v1/agents/register",
@@ -67,7 +68,8 @@ static async Task RegisterAgentAsync(string baseUrl, AgentCredentialStore creden
             Environment.MachineName,
             RuntimeInformation.OSDescription,
             RuntimeInformation.OSArchitecture.ToString(),
-            typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown"));
+            typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
+            existing?.AgentId));
     response.EnsureSuccessStatusCode();
     var registered = await response.Content.ReadFromJsonAsync<RegisteredAgent>()
         ?? throw new InvalidOperationException("The Atlas Server returned an empty registration response.");
@@ -186,7 +188,8 @@ internal sealed record AgentRegistrationRequest(
     string HostName,
     string OperatingSystem,
     string Architecture,
-    string AgentVersion);
+    string AgentVersion,
+    Guid? ExistingAgentId = null);
 
 internal sealed record RegisteredAgent(Guid AgentId, DateTimeOffset RegisteredAtUtc, string Credential);
 
