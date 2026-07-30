@@ -16,6 +16,8 @@ Server를 중지하거나 SQLite 온라인 백업을 사용한 뒤 DB와 Data Pr
 
 새 Release 파일을 별도 디렉터리에 배치하고, DB와 키를 백업한 뒤 서비스를 중지·교체·시작한다. schemaVersion과 Agent 전송·운영자 로그인을 확인하고 이전 배포 파일은 롤백이 확인될 때까지 보관한다.
 
+Agent 자동 업데이트는 Server의 `Atlas:AgentUpdate`에 대상 버전, 절대 HTTPS 패키지 URL과 SHA-256을 설정한 뒤 관리자 화면에서 Agent별로 승인한다. Agent는 승인된 배포만 가져오며 다운로드·해시·ZIP 경로·패키지 버전을 검증한 후 백업과 교체를 수행한다. Linux unit은 설치 디렉터리 쓰기 권한과 `Restart=on-failure`가 필요하고, Windows 서비스는 업데이트 helper가 서비스를 다시 시작할 수 있는 계정으로 실행해야 한다.
+
 ## Release 산출물
 
 Release 빌드와 테스트가 통과한 작업 트리에서 `scripts/Publish-CoreWatchAtlas.ps1 -OutputDirectory <경로>`를 실행한다. Server와 Agent의 framework-dependent ZIP, 각 ZIP의 SHA-256 파일을 만든다. 대상 호스트에는 .NET 10 ASP.NET Core Runtime(Server) 또는 .NET 10 Runtime(Agent)이 필요하다.

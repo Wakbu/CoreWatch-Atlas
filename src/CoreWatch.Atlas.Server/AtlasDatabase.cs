@@ -9,7 +9,7 @@ namespace CoreWatch.Atlas.Server;
 
 public sealed partial class AtlasDatabase
 {
-    public const int CurrentSchemaVersion = 6;
+    public const int CurrentSchemaVersion = 7;
 
     private readonly string _connectionString;
     private readonly TimeProvider _timeProvider;
@@ -250,6 +250,32 @@ public sealed partial class AtlasDatabase
                 INSERT OR IGNORE INTO alert_rules(id,name,metric_type,threshold,severity,enabled) VALUES (1,'CPU critical','cpu',90,'critical',1),(2,'Memory critical','memory',90,'critical',1),(3,'Disk critical','disk',90,'critical',1),(4,'Agent offline','offline',45,'critical',1);
                 INSERT OR IGNORE INTO schema_migrations(version,applied_at_utc) VALUES(6,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
                 """, cancellationToken, transaction);
+
+            await ExecuteNonQueryAsync(
+                connection,
+                """
+                CREATE TABLE IF NOT EXISTS agent_update_deployments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_id TEXT NOT NULL,
+                    version TEXT NOT NULL,
+                    package_url TEXT NOT NULL,
+                    sha256 TEXT NOT NULL,
+                    state TEXT NOT NULL CHECK(state IN (
+                        'pending','downloading','staged','applying',
+                        'succeeded','failed','rolled_back')),
+                    detail TEXT NULL,
+                    requested_by TEXT NOT NULL,
+                    requested_at_utc TEXT NOT NULL,
+                    updated_at_utc TEXT NOT NULL,
+                    FOREIGN KEY(agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS ix_agent_updates_agent_time
+                    ON agent_update_deployments(agent_id, requested_at_utc DESC);
+                INSERT OR IGNORE INTO schema_migrations(version,applied_at_utc)
+                    VALUES(7,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+                """,
+                cancellationToken,
+                transaction);
 
             await transaction.CommitAsync(cancellationToken);
             _initialized = true;

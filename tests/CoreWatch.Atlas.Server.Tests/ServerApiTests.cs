@@ -54,6 +54,9 @@ public sealed class ServerApiTests
             "data-lifecycle");
         StringAssert.Contains(
             await script.Content.ReadAsStringAsync(),
+            "data-update-agent");
+        StringAssert.Contains(
+            await script.Content.ReadAsStringAsync(),
             "chart-scale");
         StringAssert.Contains(await script.Content.ReadAsStringAsync(), "atlas:render");
         Assert.IsTrue(alertScript.Content.Headers.ContentType?.MediaType?.Contains("javascript"));
@@ -83,10 +86,10 @@ public sealed class ServerApiTests
         var status = await client.GetFromJsonAsync<JsonElement>("/api/v1/status");
 
         Assert.AreEqual("ready", ready.GetProperty("status").GetString());
-        Assert.AreEqual(6, ready.GetProperty("schemaVersion").GetInt32());
+        Assert.AreEqual(7, ready.GetProperty("schemaVersion").GetInt32());
         Assert.AreEqual("CoreWatch-Atlas.Server", status.GetProperty("service").GetString());
         Assert.AreEqual(
-            6,
+            7,
             status.GetProperty("storage").GetProperty("schemaVersion").GetInt32());
     }
 
@@ -130,7 +133,43 @@ public sealed class ServerApiTests
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM schema_migrations;";
 
-        Assert.AreEqual(6L, (long)(await command.ExecuteScalarAsync())!);
+        Assert.AreEqual(7L, (long)(await command.ExecuteScalarAsync())!);
+    }
+
+    [TestMethod]
+    public async Task AgentUpdateRequiresPerAgentRequestAndRecordsStatus()
+    {
+        using var fixture = new ServerFixture();
+        using var client = fixture.CreateClient();
+        await client.GetAsync("/health/ready");
+        var database = fixture.Services.GetRequiredService<AtlasDatabase>();
+        var token = await database.CreateRegistrationTokenAsync(TimeSpan.FromMinutes(5));
+        var agent = await database.RegisterAgentAsync(
+            new AgentRegistrationRequest(
+                token.Value, "update-host", "Test OS", "x64", "1.0.0"));
+        var operatorIdentity = await database.CreateOperatorAsync(
+            "update-admin", "Atlas-update-test-password!", OperatorRoles.Administrator);
+
+        Assert.IsNotNull(agent);
+        Assert.IsNull(await database.GetPendingAgentUpdateAsync(agent.AgentId));
+        var deployment = await database.RequestAgentUpdateAsync(
+            agent.AgentId,
+            operatorIdentity.OperatorId,
+            new AgentUpdateOptions
+            {
+                Enabled = true,
+                Version = "2.0.0",
+                PackageUrl = "https://atlas.example.test/agent.zip",
+                Sha256 = new string('a', 64),
+            });
+
+        Assert.IsNotNull(deployment);
+        Assert.AreEqual("pending", deployment.State);
+        Assert.IsTrue(await database.UpdateAgentUpdateStatusAsync(
+            agent.AgentId, deployment.Id, "downloading", null));
+        var history = await database.ListAgentUpdatesAsync(agent.AgentId);
+        Assert.HasCount(1, history);
+        Assert.AreEqual("downloading", history[0].State);
     }
 
     private static async Task AuthenticateAsync(

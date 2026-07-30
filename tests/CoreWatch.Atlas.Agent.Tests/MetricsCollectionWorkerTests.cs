@@ -3,6 +3,7 @@ using CoreWatch.Atlas.Agent;
 using CoreWatch.Atlas.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,8 @@ public sealed class MetricsCollectionWorkerTests
             .Build();
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<IHostApplicationLifetime, TestHostApplicationLifetime>();
+        services.AddSingleton<IHostEnvironment, TestHostEnvironment>();
         services.AddAtlasMetricsCollection<FakeCollector>(configuration);
 
         using var provider = services.BuildServiceProvider();
@@ -39,6 +42,8 @@ public sealed class MetricsCollectionWorkerTests
             .Any(static service => service is MetricsCollectionWorker));
         Assert.IsTrue(provider.GetServices<IHostedService>()
             .Any(static service => service is PrometheusEndpointWorker));
+        Assert.IsTrue(provider.GetServices<IHostedService>()
+            .Any(static service => service.GetType().Name == "AgentUpdateWorker"));
     }
 
     [TestMethod]
@@ -247,5 +252,21 @@ public sealed class MetricsCollectionWorkerTests
         public void Dispose()
         {
         }
+    }
+
+    private sealed class TestHostApplicationLifetime : IHostApplicationLifetime
+    {
+        public CancellationToken ApplicationStarted => CancellationToken.None;
+        public CancellationToken ApplicationStopping => CancellationToken.None;
+        public CancellationToken ApplicationStopped => CancellationToken.None;
+        public void StopApplication() { }
+    }
+
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Development;
+        public string ApplicationName { get; set; } = "Tests";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = null!;
     }
 }
