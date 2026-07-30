@@ -55,12 +55,34 @@ public sealed class ServerApiTests
         StringAssert.Contains(
             await script.Content.ReadAsStringAsync(),
             "data-update-agent");
+        var enrollmentScript = await client.GetAsync("/js/enrollment.js");
+        StringAssert.Contains(
+            await enrollmentScript.Content.ReadAsStringAsync(),
+            "atlas-ca.crt");
+        StringAssert.Contains(
+            await enrollmentScript.Content.ReadAsStringAsync(),
+            "--cacert");
         StringAssert.Contains(
             await script.Content.ReadAsStringAsync(),
             "chart-scale");
         StringAssert.Contains(await script.Content.ReadAsStringAsync(), "atlas:render");
         Assert.IsTrue(alertScript.Content.Headers.ContentType?.MediaType?.Contains("javascript"));
         StringAssert.Contains(await alertScript.Content.ReadAsStringAsync(), "atlas:render");
+    }
+
+    [TestMethod]
+    public async Task LinuxInstallerRequiresPinnedCertificateBootstrap()
+    {
+        using var fixture = new ServerFixture();
+        using var client = fixture.CreateClient();
+
+        var response = await client.GetAsync("/install/linux.sh");
+        var script = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        StringAssert.Contains(script, "COREWATCH_ATLAS_CA_CERT");
+        StringAssert.Contains(script, "update-ca-certificates");
+        StringAssert.Contains(script, "--cacert");
     }
 
         [TestMethod]
