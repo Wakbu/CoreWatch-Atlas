@@ -127,3 +127,18 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - `/install/windows.ps1` and `/install/linux.sh` download the packaged Agent, register it, persist its credential, and configure an automatic Windows service or systemd service.
 - Release Server package now embeds `wwwroot/downloads/corewatch-atlas-agent.zip`; installer bootstrap scripts use the same HTTPS Server origin, so no third-party package URL or long-lived credential is exposed.
 - Verified Debug/Release builds and 70 automated tests; package inspection confirmed the embedded Agent ZIP and SHA-256 output.
+
+## 2026-07-30 Agent automatic update
+
+- Current branch: `main`. Latest pushed UI commits: `1154b65`, `4f477d3`, `1d14a12`.
+- Release `v1.0.3` was published with Server/Agent ZIP and SHA-256. Production Server `100.95.44.33` was upgraded to v1.0.3 and `/health/ready` returned 200.
+- Agent enrollment polling fix: `atlas.js` skips full `render()` while route is `#/enroll`, so a generated one-time install command should persist through the 15-second poll.
+- Production static files may include precompressed `.br`/`.gz`; direct SCP deployment was used after GitHub raw CDN served stale JS. Verify production response before claiming a UI change is live.
+- Two Linux Agent targets were prepared: `100.72.128.27` (test) and `100.121.229.26` (web). Both trust the Atlas self-signed CA and have .NET 10 + ASP.NET Core 10 Runtime installed. Their Agent install must be retried with freshly issued one-time tokens; earlier attempts failed before registration due missing package/runtime.
+- Self-signed certificate public file is served at `/install/atlas-ca.crt`. Tailscale certificate issuance was unavailable for the account.
+- Automatic update implementation is complete in the working tree. An administrator explicitly approves one Agent, the authenticated Agent polls its own pending manifest, downloads over trusted HTTPS, verifies SHA-256, stages the ZIP and hands replacement to an out-of-process helper.
+- The helper validates archive paths and the packaged Agent version, preserves Agent data, backs up the previous installation, replaces files, restarts through the service manager and records success or rollback for the restarted Agent to report.
+- SQLite schema v7 stores per-Agent deployment state/history. The dashboard exposes a per-Agent approval button; no universal silent rollout exists.
+- Automated tests cover invalid manifests, checksum failure, unsafe ZIP paths, replacement/data preservation, rollback and database transitions.
+- Remaining release work: publish new Server/Agent packages, deploy to `100.95.44.33`, and verify real Windows/Linux service updates before declaring production rollout complete.
+- Enrollment UI still needs visual review. User wants full-width polished OS card design with real Windows/Linux logos; last CSS change simplified command area. Do not rely only on browser cache—verify actual compressed static assets.

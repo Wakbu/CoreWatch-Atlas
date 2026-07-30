@@ -8,9 +8,12 @@ Type=simple
 User=corewatch-agent
 WorkingDirectory=/opt/corewatch-atlas-agent
 EnvironmentFile=/etc/corewatch-atlas-agent/agent.env
+Environment=Atlas__AutomaticUpdate__StatePath=/var/lib/corewatch-atlas-agent/updates
+ExecStartPre=+chown -R corewatch-agent:corewatch-agent /opt/corewatch-atlas-agent
 ExecStart=/usr/bin/dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll
+ExecStopPost=+/bin/sh -c 'test ! -f /var/lib/corewatch-atlas-agent/updates/pending-handoff.json || exec /usr/bin/dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll --apply-agent-update /var/lib/corewatch-atlas-agent/updates/pending-handoff.json'
 Restart=on-failure
-RestartSec=5
+RestartSec=30
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

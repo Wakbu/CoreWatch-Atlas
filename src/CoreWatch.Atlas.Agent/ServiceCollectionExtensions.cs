@@ -19,6 +19,17 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(LocalOutputOptions.SectionName));
         services.Configure<ServerTransmissionOptions>(
             configuration.GetSection(ServerTransmissionOptions.SectionName));
+        services
+            .AddOptions<AutomaticUpdateOptions>()
+            .Bind(configuration.GetSection(AutomaticUpdateOptions.SectionName))
+            .Validate(
+                options => options.CheckInterval >= TimeSpan.FromMinutes(1)
+                    && options.CheckInterval <= TimeSpan.FromDays(1),
+                "Automatic update CheckInterval must be between one minute and one day.")
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.StatePath),
+                "Automatic update StatePath must not be empty.")
+            .ValidateOnStart();
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<TextWriter>(static _ => Console.Out);
         services.TryAddSingleton<LatestMetricsSnapshotStore>();
@@ -35,6 +46,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISystemMetricsCollector, TCollector>();
         services.AddHostedService<MetricsCollectionWorker>();
         services.AddHostedService<PrometheusEndpointWorker>();
+        services.AddHostedService<AgentUpdateWorker>();
 
         return services;
     }

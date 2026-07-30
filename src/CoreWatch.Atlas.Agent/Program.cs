@@ -6,6 +6,12 @@ using CoreWatch.Atlas.Collectors.Linux;
 using CoreWatch.Atlas.Collectors.Windows;
 
 var registerBaseUrl = ReadOption(args, "--register-agent");
+var updateHandoff = ReadOption(args, "--apply-agent-update");
+if (updateHandoff is not null)
+{
+    Environment.ExitCode = await AgentUpdateInstaller.RunAsync(updateHandoff);
+    return;
+}
 var rotateCredential = args.Contains("--rotate-agent-credential", StringComparer.Ordinal);
 if (registerBaseUrl is not null && rotateCredential)
 {
@@ -143,6 +149,11 @@ static string[] RemoveCredentialCommandArguments(string[] arguments)
         }
 
         if (string.Equals(arguments[index], "--register-agent", StringComparison.Ordinal))
+        {
+            index++;
+            continue;
+        }
+        if (string.Equals(arguments[index], "--apply-agent-update", StringComparison.Ordinal))
         {
             index++;
             continue;

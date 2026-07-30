@@ -137,3 +137,18 @@ Windows API 기반 기본 지표와 Windows 실환경 검증을 구현했다.
 - Add the Administrator-only Agent enrollment page and one-time installation token flow.
 - Package the Agent ZIP inside the Server release so Windows/Linux bootstrap scripts can install from the same HTTPS origin.
 - Before publishing 1.0.0, run the release workflow, validate the published Server package and smoke-test a real Windows/Linux service installation.
+
+## Agent automatic update (implementation complete: 2026-07-30)
+
+- Administrator-approved per-Agent rollout only; there is no silent universal rollout.
+- Agent-authenticated pending manifest and status APIs with SQLite status history.
+- HTTPS/loopback manifest validation, staged ZIP download, SHA-256 verification and safe extraction.
+- Out-of-process service handoff, version validation, backup, restart-result reporting and rollback.
+- Dashboard per-Agent update approval control.
+- Automated coverage for manifest rejection, hash failure, archive traversal, replacement, rollback and database state.
+
+## Release verification remaining
+
+1. Publish a new release with Server/Agent ZIP + SHA-256.
+2. Deploy Server to `100.95.44.33` and verify a real Windows and Linux Agent update.
+3. Recheck enrollment UI on production after static asset compression/cache handling.

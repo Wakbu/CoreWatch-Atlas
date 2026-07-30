@@ -48,6 +48,17 @@ builder.Services
         "AgentPackagePath must be an absolute application path.")
     .ValidateOnStart();
 builder.Services
+    .AddOptions<AgentUpdateOptions>()
+    .Bind(builder.Configuration.GetSection(AgentUpdateOptions.SectionName))
+    .Validate(
+        options => !options.Enabled || (Version.TryParse(options.Version, out _)
+            && Uri.TryCreate(options.PackageUrl, UriKind.Absolute, out var packageUri)
+            && (packageUri.Scheme == Uri.UriSchemeHttps || packageUri.IsLoopback)
+            && options.Sha256.Length == 64
+            && options.Sha256.All(Uri.IsHexDigit)),
+        "Enabled AgentUpdate requires Version, absolute PackageUrl and SHA-256.")
+    .ValidateOnStart();
+builder.Services
     .AddOptions<ServerApiOptions>()
     .Bind(builder.Configuration.GetSection(ServerApiOptions.SectionName))
     .Validate(
@@ -513,6 +524,90 @@ app.MapPost(
             stored);
     });
 
+app.MapGet(
+    "/api/v1/agents/{agentId:guid}/updates/pending",
+    async (
+        Guid agentId,
+        HttpContext context,
+        AtlasDatabase storage,
+        CancellationToken cancellationToken) =>
+    {
+        if (!await AuthenticateAsync(context, storage, agentId, cancellationToken))
+        {
+            return Results.Unauthorized();
+        }
+        var deployment = await storage.GetPendingAgentUpdateAsync(agentId, cancellationToken);
+        return deployment is null
+            ? Results.NoContent()
+            : Results.Ok(new AgentUpdateManifest(
+                deployment.Id, deployment.Version, deployment.PackageUrl, deployment.Sha256));
+    });
+
+app.MapPost(
+    "/api/v1/agents/{agentId:guid}/updates/{deploymentId:long}/status",
+    async (
+        Guid agentId,
+        long deploymentId,
+        HttpContext context,
+        AgentUpdateStatusRequest request,
+        AtlasDatabase storage,
+        CancellationToken cancellationToken) =>
+    {
+        if (!await AuthenticateAsync(context, storage, agentId, cancellationToken))
+        {
+            return Results.Unauthorized();
+        }
+        try
+        {
+            return await storage.UpdateAgentUpdateStatusAsync(
+                agentId, deploymentId, request.State, request.Detail, cancellationToken)
+                ? Results.NoContent()
+                : Results.NotFound();
+        }
+        catch (ArgumentException exception)
+        {
+            return Results.BadRequest(new { error = exception.Message });
+        }
+    });
+
+app.MapPost(
+    "/api/v1/agents/{agentId:guid}/updates",
+    async (
+        Guid agentId,
+        ClaimsPrincipal user,
+        HttpContext context,
+        IAntiforgery antiforgery,
+        IOptions<AgentUpdateOptions> options,
+        AtlasDatabase storage,
+        CancellationToken cancellationToken) =>
+    {
+        if (!await ValidateAntiforgeryAsync(context, antiforgery))
+        {
+            return Results.BadRequest(new { error = "Invalid CSRF token." });
+        }
+        var operatorId = GetOperatorId(user);
+        if (operatorId is null)
+        {
+            return Results.Forbid();
+        }
+        if (!options.Value.Enabled)
+        {
+            return Results.Conflict(new { error = "No Agent update release is configured." });
+        }
+        var deployment = await storage.RequestAgentUpdateAsync(
+            agentId, operatorId.Value, options.Value, cancellationToken);
+        return deployment is null
+            ? Results.NotFound()
+            : Results.Created($"/api/v1/agents/{agentId:D}/updates/{deployment.Id}", deployment);
+    })
+    .RequireAuthorization(OperatorPolicies.Admin);
+
+app.MapGet(
+    "/api/v1/agents/{agentId:guid}/updates",
+    async (Guid agentId, AtlasDatabase storage, CancellationToken cancellationToken) =>
+        Results.Ok(await storage.ListAgentUpdatesAsync(agentId, cancellationToken)))
+    .RequireAuthorization(OperatorPolicies.View);
+
 app.MapPost(
     "/api/v1/agents/{agentId:guid}/archive",
     async (
@@ -748,9 +843,11 @@ static string BuildLinuxInstallerScript(string serverUrl, string packageUrl) =>
     [Service]
     Type=simple
     Environment=Atlas__CredentialStore__Path=/var/lib/corewatch-atlas-agent
+    Environment=Atlas__AutomaticUpdate__StatePath=/var/lib/corewatch-atlas-agent/updates
     ExecStart=/usr/bin/dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll
-    Restart=always
-    RestartSec=5
+    ExecStopPost=+/bin/sh -c 'test ! -f /var/lib/corewatch-atlas-agent/updates/pending-handoff.json || exec /usr/bin/dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll --apply-agent-update /var/lib/corewatch-atlas-agent/updates/pending-handoff.json'
+    Restart=on-failure
+    RestartSec=30
     [Install]
     WantedBy=multi-user.target
     UNIT
