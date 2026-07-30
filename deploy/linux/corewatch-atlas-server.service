@@ -9,7 +9,9 @@ User=corewatch
 Group=corewatch
 WorkingDirectory=/opt/corewatch-atlas
 EnvironmentFile=/etc/corewatch-atlas/server.env
+Environment=Atlas__ServerUpdate__StatePath=/var/lib/corewatch-atlas/updates
 ExecStart=/usr/bin/dotnet /opt/corewatch-atlas/CoreWatch.Atlas.Server.dll
+ExecStopPost=+/bin/sh -c 'test ! -f /var/lib/corewatch-atlas/updates/pending-server-update.json || exec /usr/bin/dotnet /opt/corewatch-atlas/CoreWatch.Atlas.Server.dll --apply-server-update /var/lib/corewatch-atlas/updates/pending-server-update.json'
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true

@@ -18,6 +18,8 @@ Server를 중지하거나 SQLite 온라인 백업을 사용한 뒤 DB와 Data Pr
 
 Agent 자동 업데이트는 Server의 `Atlas:AgentUpdate`에 대상 버전, 절대 HTTPS 패키지 URL과 SHA-256을 설정한 뒤 관리자 화면에서 Agent별로 승인한다. Agent는 승인된 배포만 가져오며 다운로드·해시·ZIP 경로·패키지 버전을 검증한 후 백업과 교체를 수행한다. Linux unit은 설치 디렉터리 쓰기 권한과 `Restart=on-failure`가 필요하고, Windows 서비스는 업데이트 helper가 서비스를 다시 시작할 수 있는 계정으로 실행해야 한다.
 
+Server 자동 업데이트는 `Atlas:ServerUpdate`에 더 높은 대상 버전, 절대 HTTPS ZIP URL, SHA-256을 설정하면 동작한다. Server는 패키지를 `/var/lib/corewatch-atlas/updates`에 내려받아 해시를 검증한 뒤 종료한다. Linux systemd unit의 `ExecStopPost`는 root 권한으로 패키지를 안전 추출·백업·교체하고, 실패 시 백업을 복원한 뒤 systemd가 서비스를 다시 시작한다. `deploy/linux/corewatch-atlas-server.service`의 `ExecStopPost`와 `Atlas__ServerUpdate__StatePath`를 반드시 설치해야 하며, 설정 파일은 기존 값을 유지한다.
+
 자체서명 인증서를 사용하는 Server의 Agent 등록 명령은 첫 단계에서만 `curl -k` 또는 PowerShell `-SkipCertificateCheck`으로 공개 인증서를 받아 OS 신뢰 저장소에 등록합니다. 이후 설치 스크립트·패키지·Agent 등록은 등록한 CA로 정상 검증합니다. 생성된 명령을 수정하거나 CA 등록 단계를 건너뛰지 않습니다.
 
 ## Release 산출물
