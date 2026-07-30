@@ -9,7 +9,7 @@ namespace CoreWatch.Atlas.Server;
 
 public sealed partial class AtlasDatabase
 {
-    public const int CurrentSchemaVersion = 5;
+    public const int CurrentSchemaVersion = 6;
 
     private readonly string _connectionString;
     private readonly TimeProvider _timeProvider;
@@ -237,6 +237,19 @@ public sealed partial class AtlasDatabase
                 """,
                 cancellationToken,
                 transaction);
+
+            await ExecuteNonQueryAsync(
+                connection,
+                """
+                CREATE TABLE IF NOT EXISTS alert_rules (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,metric_type TEXT NOT NULL CHECK(metric_type IN ('cpu','memory','disk','offline')),threshold REAL NOT NULL,severity TEXT NOT NULL CHECK(severity IN ('warning','critical')),enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)));
+                CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY AUTOINCREMENT,agent_id TEXT NOT NULL,rule_id INTEGER NOT NULL,severity TEXT NOT NULL,current_value REAL NOT NULL,state TEXT NOT NULL CHECK(state IN ('active','resolved')),opened_at_utc TEXT NOT NULL,resolved_at_utc TEXT NULL,acknowledged_at_utc TEXT NULL,acknowledged_by TEXT NULL,FOREIGN KEY(agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE,FOREIGN KEY(rule_id) REFERENCES alert_rules(id) ON DELETE CASCADE);
+                CREATE UNIQUE INDEX IF NOT EXISTS ix_alerts_active_agent_rule ON alerts(agent_id,rule_id) WHERE state='active';
+                CREATE INDEX IF NOT EXISTS ix_alerts_time ON alerts(opened_at_utc DESC);
+                CREATE TABLE IF NOT EXISTS notification_channels (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,url TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)));
+                CREATE TABLE IF NOT EXISTS notification_deliveries (id INTEGER PRIMARY KEY AUTOINCREMENT,alert_id INTEGER NOT NULL,channel_id INTEGER NOT NULL,event_type TEXT NOT NULL,created_at_utc TEXT NOT NULL,delivered_at_utc TEXT NULL,attempt_count INTEGER NOT NULL DEFAULT 0,last_error TEXT NULL,FOREIGN KEY(alert_id) REFERENCES alerts(id) ON DELETE CASCADE,FOREIGN KEY(channel_id) REFERENCES notification_channels(id) ON DELETE CASCADE);
+                INSERT OR IGNORE INTO alert_rules(id,name,metric_type,threshold,severity,enabled) VALUES (1,'CPU critical','cpu',90,'critical',1),(2,'Memory critical','memory',90,'critical',1),(3,'Disk critical','disk',90,'critical',1),(4,'Agent offline','offline',45,'critical',1);
+                INSERT OR IGNORE INTO schema_migrations(version,applied_at_utc) VALUES(6,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+                """, cancellationToken, transaction);
 
             await transaction.CommitAsync(cancellationToken);
             _initialized = true;

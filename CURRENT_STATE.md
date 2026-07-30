@@ -23,7 +23,7 @@ Windows·Linux Agent가 보호 저장소의 자격 증명으로 HTTPS 중앙 Ser
 - 기본 활성화된 camelCase 한 줄 JSON 표준 출력
 - 선택적 Kestrel Prometheus `/metrics`, 기본 `127.0.0.1:9464`·비활성화
 - Counter·제한 label·escape·64비트 정수 정밀도 정책
-- ASP.NET Core Server, SQLite 스키마 v5와 기존 DB 멱등 업그레이드
+- ASP.NET Core Server, SQLite 스키마 v6와 기존 DB 멱등 업그레이드
 - `/health/live`, `/health/ready`, `/api/v1/status`
 - 로컬 CLI 일회성 등록 토큰, SHA-256 해시 저장, UUIDv7 영구 Agent ID
 - `POST /api/v1/agents/register`, 토큰 만료·1회 소비와 입력 검증
@@ -36,9 +36,10 @@ Windows·Linux Agent가 보호 저장소의 자격 증명으로 HTTPS 중앙 Ser
 - 운영자 쿠키 Data Protection 키 영구 저장과 Windows DPAPI 보호
 - Agent 등록·교체 CLI, Windows DPAPI·Linux 파일 권한 기반 자격 증명 보호 저장
 - Administrator Agent 보관·복원·영구 삭제, Snapshot 보관 선택과 수명주기 감사 로그
+- 경고 규칙 SQLite 저장, 발생·해제 이력과 확인 처리, HTTPS Webhook 알림 채널
 - 상세 차트 Y축 눈금·단위와 마우스오버 시점별 수치 표시
 - Server와 함께 제공되는 반응형 Web 대시보드, 검색·파생 경고·이벤트·상세 차트
-- 자동 테스트 68개: 계약 10, Agent 18, Linux 10, Windows 6, Server 24
+- 자동 테스트 69개: 계약 10, Agent 18, Linux 10, Windows 6, Server 25
 - 원격 명령 실행이나 시스템 변경 기능 없음
 
 ## 기술·검증 기준
@@ -50,7 +51,7 @@ Windows·Linux Agent가 보호 저장소의 자격 증명으로 HTTPS 중앙 Ser
 마지막 검증:
 
 - Windows 로컬 Debug/Release 경고 0·오류 0
-- 테스트 68/68 통과
+- 테스트 69/69 통과
 - 취약·deprecated 패키지 없음
 - Release Agent JSON 한 줄 출력 확인
 - 활성화된 `/metrics` HTTP 200·Prometheus 내용 확인
@@ -87,7 +88,7 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 
 ## 다음 작업
 
-다음 구현은 `docs/NEXT_STEPS.md`의 8C 경고 단계다. 경고 규칙 영구 저장, 확인 처리와 알림 채널을 설계·구현한다.
+다음 구현은 `docs/NEXT_STEPS.md`의 8C 배포 단계다. Server·Agent 서비스 패키지와 컨테이너 배포를 구현한다.
 
 ## 관련 문서
 

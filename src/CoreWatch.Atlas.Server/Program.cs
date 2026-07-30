@@ -111,6 +111,9 @@ builder.Services.AddAuthorization(
 builder.Services.AddSingleton<AtlasDatabase>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHostedService<SnapshotRetentionWorker>();
+builder.Services.AddHttpClient("atlas-alerts", client => client.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddHostedService<AlertMaintenanceWorker>();
+builder.Services.AddHostedService<AlertNotificationWorker>();
 
 var app = builder.Build();
 var database = app.Services.GetRequiredService<AtlasDatabase>();
@@ -401,6 +404,7 @@ app.MapPost(
             agentId,
             snapshot,
             cancellationToken);
+        await storage.EvaluateAlertsAsync(agentId, stored.Metrics, cancellationToken);
         return Results.Created(
             $"/api/v1/agents/{agentId:D}/snapshots/{stored.Id}",
             stored);
@@ -497,6 +501,16 @@ app.MapDelete(
             : Results.NotFound();
     })
     .RequireAuthorization(OperatorPolicies.Admin);
+app.MapGet("/api/v1/alert-rules", async (AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListAlertRulesAsync(ct))).RequireAuthorization(OperatorPolicies.View);
+app.MapPost("/api/v1/alert-rules", async ([FromBody] AlertRuleRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>{if(!await ValidateAntiforgeryAsync(c,a))return Results.BadRequest();try{return Results.Created("/api/v1/alert-rules",await s.CreateAlertRuleAsync(x,ct));}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization(OperatorPolicies.Admin);
+app.MapPut("/api/v1/alert-rules/{id:long}", async(long id,[FromBody] AlertRuleRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>{if(!await ValidateAntiforgeryAsync(c,a))return Results.BadRequest();try{return await s.UpdateAlertRuleAsync(id,x,ct)?Results.NoContent():Results.NotFound();}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization(OperatorPolicies.Admin);
+app.MapDelete("/api/v1/alert-rules/{id:long}", async(long id,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>!await ValidateAntiforgeryAsync(c,a)?Results.BadRequest():await s.DeleteAlertRuleAsync(id,ct)?Results.NoContent():Results.NotFound()).RequireAuthorization(OperatorPolicies.Admin);
+app.MapGet("/api/v1/alerts",async(bool? activeOnly,int? limit,AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListAlertsAsync(activeOnly??true,Math.Clamp(limit??100,1,500),ct))).RequireAuthorization(OperatorPolicies.View);
+app.MapPost("/api/v1/alerts/{id:long}/acknowledge",async(long id,ClaimsPrincipal u,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>{if(!await ValidateAntiforgeryAsync(c,a))return Results.BadRequest();return await s.AcknowledgeAlertAsync(id,u.Identity?.Name??"operator",ct)?Results.NoContent():Results.NotFound();}).RequireAuthorization(OperatorPolicies.View);
+app.MapGet("/api/v1/notification-channels",async(AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListNotificationChannelsAsync(ct))).RequireAuthorization(OperatorPolicies.Admin);
+app.MapPost("/api/v1/notification-channels",async([FromBody] NotificationChannelRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>{if(!await ValidateAntiforgeryAsync(c,a))return Results.BadRequest();try{return Results.Created("/api/v1/notification-channels",await s.CreateNotificationChannelAsync(x,ct));}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization(OperatorPolicies.Admin);
+app.MapPut("/api/v1/notification-channels/{id:long}",async(long id,[FromBody] NotificationChannelRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>{if(!await ValidateAntiforgeryAsync(c,a))return Results.BadRequest();try{return await s.UpdateNotificationChannelAsync(id,x,ct)?Results.NoContent():Results.NotFound();}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization(OperatorPolicies.Admin);
+app.MapDelete("/api/v1/notification-channels/{id:long}",async(long id,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>!await ValidateAntiforgeryAsync(c,a)?Results.BadRequest():await s.DeleteNotificationChannelAsync(id,ct)?Results.NoContent():Results.NotFound()).RequireAuthorization(OperatorPolicies.Admin);
 app.MapGet(
     "/api/v1/agents",
     async (
