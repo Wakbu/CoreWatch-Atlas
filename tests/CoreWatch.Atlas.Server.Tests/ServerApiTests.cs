@@ -56,7 +56,19 @@ public sealed class ServerApiTests
             "chart-scale");
     }
 
-    [TestMethod]
+        [TestMethod]
+    public async Task AlertRulesAndAlertsAreAvailableToOperators()
+    {
+        using var fixture = new ServerFixture();
+        using var client = fixture.CreateClient();
+        await AuthenticateAsync(fixture, client);
+        var rules = await client.GetFromJsonAsync<AlertRule[]>("/api/v1/alert-rules");
+        var alerts = await client.GetFromJsonAsync<AlertRecord[]>("/api/v1/alerts");
+        Assert.IsNotNull(rules);
+        Assert.HasCount(4, rules);
+        Assert.IsNotNull(alerts);
+    }
+[TestMethod]
     public async Task ReadyAndStatusEndpointsReportCurrentSchema()
     {
         using var fixture = new ServerFixture();
@@ -67,10 +79,10 @@ public sealed class ServerApiTests
         var status = await client.GetFromJsonAsync<JsonElement>("/api/v1/status");
 
         Assert.AreEqual("ready", ready.GetProperty("status").GetString());
-        Assert.AreEqual(5, ready.GetProperty("schemaVersion").GetInt32());
+        Assert.AreEqual(6, ready.GetProperty("schemaVersion").GetInt32());
         Assert.AreEqual("CoreWatch-Atlas.Server", status.GetProperty("service").GetString());
         Assert.AreEqual(
-            5,
+            6,
             status.GetProperty("storage").GetProperty("schemaVersion").GetInt32());
     }
 
@@ -114,7 +126,7 @@ public sealed class ServerApiTests
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM schema_migrations;";
 
-        Assert.AreEqual(5L, (long)(await command.ExecuteScalarAsync())!);
+        Assert.AreEqual(6L, (long)(await command.ExecuteScalarAsync())!);
     }
 
     private static async Task AuthenticateAsync(
