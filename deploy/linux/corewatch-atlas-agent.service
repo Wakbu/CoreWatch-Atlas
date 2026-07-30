@@ -1,0 +1,21 @@
+[Unit]
+Description=CoreWatch Atlas Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=corewatch-agent
+WorkingDirectory=/opt/corewatch-atlas-agent
+EnvironmentFile=/etc/corewatch-atlas-agent/agent.env
+ExecStart=/usr/bin/dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/corewatch-atlas-agent
+
+[Install]
+WantedBy=multi-user.target

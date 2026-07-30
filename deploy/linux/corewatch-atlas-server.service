@@ -1,0 +1,22 @@
+[Unit]
+Description=CoreWatch Atlas Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=corewatch
+Group=corewatch
+WorkingDirectory=/opt/corewatch-atlas
+EnvironmentFile=/etc/corewatch-atlas/server.env
+ExecStart=/usr/bin/dotnet /opt/corewatch-atlas/CoreWatch.Atlas.Server.dll
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/corewatch-atlas
+
+[Install]
+WantedBy=multi-user.target
