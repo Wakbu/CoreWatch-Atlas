@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using CoreWatch.Atlas.Contracts;
 using CoreWatch.Atlas.Server;
@@ -9,6 +10,13 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Mvc;
 
 const long maximumSnapshotBytes = 2 * 1024 * 1024;
+
+var applyServerUpdate = ReadOption(args, "--apply-server-update");
+if (applyServerUpdate is not null)
+{
+    Environment.ExitCode = await ServerUpdateInstaller.RunAsync(applyServerUpdate);
+    return;
+}
 
 var createOperatorUsername = ReadOption(args, "--create-operator");
 var createOperatorRole =
@@ -58,6 +66,20 @@ builder.Services
             && options.Sha256.Length == 64
             && options.Sha256.All(Uri.IsHexDigit)),
         "Enabled AgentUpdate requires Version, absolute PackageUrl and SHA-256.")
+    .ValidateOnStart();
+builder.Services
+    .AddOptions<ServerUpdateOptions>()
+    .Bind(builder.Configuration.GetSection(ServerUpdateOptions.SectionName))
+    .Validate(
+        options => options.CheckIntervalMinutes is >= 5 and <= 1440,
+        "ServerUpdate CheckIntervalMinutes must be between 5 and 1440.")
+    .Validate(
+        options => !options.Enabled || (Version.TryParse(options.Version, out _)
+            && Uri.TryCreate(options.PackageUrl, UriKind.Absolute, out var packageUri)
+            && (packageUri.Scheme == Uri.UriSchemeHttps || packageUri.IsLoopback)
+            && options.Sha256.Length == 64
+            && options.Sha256.All(Uri.IsHexDigit)),
+        "Enabled ServerUpdate requires Version, absolute PackageUrl and SHA-256.")
     .ValidateOnStart();
 builder.Services
     .AddOptions<ServerApiOptions>()
@@ -134,6 +156,8 @@ builder.Services.AddHostedService<SnapshotRetentionWorker>();
 builder.Services.AddHttpClient("atlas-alerts", client => client.Timeout = TimeSpan.FromSeconds(10));
 builder.Services.AddHostedService<AlertMaintenanceWorker>();
 builder.Services.AddHostedService<AlertNotificationWorker>();
+builder.Services.AddHttpClient("atlas-server-update", client => client.Timeout = TimeSpan.FromMinutes(10));
+builder.Services.AddHostedService<ServerUpdateWorker>();
 
 var app = builder.Build();
 var database = app.Services.GetRequiredService<AtlasDatabase>();
@@ -233,10 +257,13 @@ app.MapGet(
             certificatePath,
             certificatePassword,
             X509KeyStorageFlags.EphemeralKeySet);
-        return Results.File(
-            certificate.Export(X509ContentType.Cert),
-            "application/x-x509-ca-cert",
-            "atlas-ca.crt");
+        var pem = PemEncoding.WriteString(
+            "CERTIFICATE",
+            certificate.Export(X509ContentType.Cert));
+        return Results.Text(
+            pem,
+            "application/x-pem-file; charset=utf-8",
+            System.Text.Encoding.UTF8);
     });
 
 app.MapGet(
@@ -853,7 +880,11 @@ static string BuildLinuxInstallerScript(string serverUrl, string packageUrl) =>
     : "${COREWATCH_ATLAS_CA_CERT:?COREWATCH_ATLAS_CA_CERT is required}"
     if [ "$(id -u)" -ne 0 ]; then echo 'Run this command with sudo.' >&2; exit 1; fi
     command -v curl >/dev/null || { echo 'curl is required.' >&2; exit 1; }
-    command -v unzip >/dev/null || { echo 'unzip is required.' >&2; exit 1; }
+    if ! command -v unzip >/dev/null; then
+      command -v apt-get >/dev/null || { echo 'unzip is required.' >&2; exit 1; }
+      apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y unzip
+    fi
     command -v dotnet >/dev/null || { echo '.NET 10 runtime is required. Install it, then rerun this command.' >&2; exit 1; }
     command -v update-ca-certificates >/dev/null || { echo 'update-ca-certificates is required (Ubuntu/Debian).' >&2; exit 1; }
     test -r "$COREWATCH_ATLAS_CA_CERT" || { echo 'The Atlas CA certificate is unreadable.' >&2; exit 1; }
@@ -999,7 +1030,7 @@ static string[] RemoveLocalCommandArguments(string[] arguments)
             continue;
         }
 
-        if (arguments[index] is "--create-operator" or "--role")
+        if (arguments[index] is "--create-operator" or "--role" or "--apply-server-update")
         {
             index++;
             continue;

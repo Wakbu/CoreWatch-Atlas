@@ -148,3 +148,7 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - Linux enrollment now obtains the public Server certificate only for the initial bootstrap, installs it into the Ubuntu/Debian trust store, then verifies the installer, package and Agent registration with that certificate.
 - Windows enrollment imports the public certificate into the elevated Local Machine root store before fetching the installer.
 - The Server exports the configured public Kestrel certificate at `/install/atlas-ca.crt`; this endpoint contains no private key or password.
+## 2026-07-30 Server automatic update
+
+- `Atlas:ServerUpdate` stages an HTTPS SHA-256-verified package; Linux systemd applies it after shutdown with backup and rollback.
+- The self-signed enrollment CA endpoint now serves PEM for Linux `curl --cacert` compatibility.

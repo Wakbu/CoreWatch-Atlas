@@ -83,6 +83,7 @@ public sealed class ServerApiTests
         StringAssert.Contains(script, "COREWATCH_ATLAS_CA_CERT");
         StringAssert.Contains(script, "update-ca-certificates");
         StringAssert.Contains(script, "--cacert");
+        StringAssert.Contains(script, "apt-get install -y unzip");
     }
 
         [TestMethod]
