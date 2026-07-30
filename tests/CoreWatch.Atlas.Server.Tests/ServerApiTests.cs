@@ -63,6 +63,9 @@ public sealed class ServerApiTests
             await enrollmentScript.Content.ReadAsStringAsync(),
             "--cacert");
         StringAssert.Contains(
+            await enrollmentScript.Content.ReadAsStringAsync(),
+            "curl.exe --fail");
+        StringAssert.Contains(
             await script.Content.ReadAsStringAsync(),
             "chart-scale");
         StringAssert.Contains(await script.Content.ReadAsStringAsync(), "atlas:render");
@@ -84,6 +87,10 @@ public sealed class ServerApiTests
         StringAssert.Contains(script, "update-ca-certificates");
         StringAssert.Contains(script, "--cacert");
         StringAssert.Contains(script, "apt-get install -y unzip");
+        StringAssert.Contains(script, "dotnet-install.sh");
+        StringAssert.Contains(script, "--runtime aspnetcore --channel 10.0");
+        StringAssert.Contains(script, "ExecStart=/usr/bin/env dotnet");
+        StringAssert.Contains(script, "test -f \"$root/CoreWatch.Atlas.Agent.dll\"");
     }
 
         [TestMethod]

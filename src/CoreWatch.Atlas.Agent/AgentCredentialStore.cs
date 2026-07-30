@@ -51,7 +51,7 @@ internal sealed class AgentCredentialStore
                     "CoreWatch-Atlas.Agent");
                 if (OperatingSystem.IsWindows())
                 {
-                    configurationBuilder.ProtectKeysWithDpapi();
+                    configurationBuilder.ProtectKeysWithDpapi(protectToLocalMachine: true);
                 }
             });
         protector = provider.CreateProtector(Purpose);
