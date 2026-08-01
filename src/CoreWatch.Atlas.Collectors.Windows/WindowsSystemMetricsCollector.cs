@@ -106,3 +106,4 @@ public sealed class WindowsSystemMetricsCollector : ISystemMetricsCollector
             second.LogicalProcessorCount);
     }
 }
+// CoreWatch Atlas module: WindowsSystemMetricsCollector.

@@ -6,3 +6,4 @@ public sealed class AgentInstallerOptions
 
     public string AgentPackagePath { get; set; } = "/downloads/corewatch-atlas-agent.zip";
 }
+// CoreWatch Atlas module: AgentInstallerOptions.

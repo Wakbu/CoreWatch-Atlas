@@ -165,3 +165,4 @@ public sealed class MetricsContractsTests
         }
     }
 }
+// CoreWatch Atlas module: MetricsContractsTests.

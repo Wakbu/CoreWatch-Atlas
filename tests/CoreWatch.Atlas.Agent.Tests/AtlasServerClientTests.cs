@@ -154,3 +154,4 @@ public sealed class AtlasServerClientTests
         }
     }
 }
+// CoreWatch Atlas module: AtlasServerClientTests.

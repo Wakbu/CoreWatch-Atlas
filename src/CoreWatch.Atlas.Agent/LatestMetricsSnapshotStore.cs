@@ -14,3 +14,4 @@ public sealed class LatestMetricsSnapshotStore
         Volatile.Write(ref latest, snapshot);
     }
 }
+// CoreWatch Atlas module: LatestMetricsSnapshotStore.

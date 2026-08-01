@@ -208,3 +208,4 @@ internal sealed record RegisteredAgent(Guid AgentId, DateTimeOffset RegisteredAt
 internal sealed record AgentCredentialResponse(Guid AgentId, string Credential, DateTimeOffset IssuedAtUtc);
 
 public partial class Program;
+// CoreWatch Atlas module: Program.

@@ -28,3 +28,4 @@ foreach ($name in @('server', 'agent')) {
   Get-FileHash -LiteralPath $archive -Algorithm SHA256 | Select-Object Algorithm, Hash, Path | Format-List | Out-File -LiteralPath "$archive.sha256.txt" -Encoding utf8
 }
 Write-Host "Published packages: $outputRoot"
+# CoreWatch Atlas operational script: Publish-CoreWatchAtlas.

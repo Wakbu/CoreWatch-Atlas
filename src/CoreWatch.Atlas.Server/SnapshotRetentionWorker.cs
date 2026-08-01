@@ -50,3 +50,4 @@ public sealed class SnapshotRetentionWorker(
         }
     }
 }
+// CoreWatch Atlas module: SnapshotRetentionWorker.

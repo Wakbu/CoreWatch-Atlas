@@ -136,3 +136,4 @@ internal static class ServerUpdateInstaller
         catch (ArgumentException) { }
     }
 }
+// CoreWatch Atlas module: ServerUpdateInstaller.

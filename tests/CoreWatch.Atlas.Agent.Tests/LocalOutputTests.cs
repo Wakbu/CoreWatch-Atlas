@@ -158,3 +158,4 @@ public sealed class LocalOutputTests
             [new DiskIoMetrics("disk\"0", ulong.MaxValue, 2_000)],
             [new NetworkInterfaceMetrics("eth0", 3_000, 4_000)]);
 }
+// CoreWatch Atlas module: LocalOutputTests.

@@ -17,3 +17,4 @@ internal sealed class UnconfiguredSystemMetricsCollector : ISystemMetricsCollect
                 "No operating-system metrics collector has been configured."));
     }
 }
+// CoreWatch Atlas module: UnconfiguredSystemMetricsCollector.

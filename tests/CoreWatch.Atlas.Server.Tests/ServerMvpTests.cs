@@ -420,3 +420,4 @@ public sealed class ServerMvpTests
         public void Advance(TimeSpan duration) => _utcNow = _utcNow.Add(duration);
     }
 }
+// CoreWatch Atlas module: ServerMvpTests.

@@ -160,3 +160,4 @@ internal sealed class AgentUpdateWorker(
                 : "corewatch-atlas-agent"
             : configured;
 }
+// CoreWatch Atlas module: AgentUpdateWorker.

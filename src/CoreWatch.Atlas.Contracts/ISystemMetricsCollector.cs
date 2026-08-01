@@ -7,3 +7,4 @@ public interface ISystemMetricsCollector
     ValueTask<SystemMetricsSnapshot> CaptureAsync(
         CancellationToken cancellationToken = default);
 }
+// CoreWatch Atlas module: ISystemMetricsCollector.

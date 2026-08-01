@@ -235,3 +235,4 @@ public sealed partial class AtlasDatabase
             CultureInfo.InvariantCulture,
             DateTimeStyles.RoundtripKind);
 }
+// CoreWatch Atlas module: AtlasDatabase.Snapshots.

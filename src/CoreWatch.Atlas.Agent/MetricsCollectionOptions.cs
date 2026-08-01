@@ -6,3 +6,4 @@ public sealed class MetricsCollectionOptions
 
     public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(15);
 }
+// CoreWatch Atlas module: MetricsCollectionOptions.

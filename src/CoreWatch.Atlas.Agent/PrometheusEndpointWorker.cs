@@ -88,3 +88,4 @@ internal sealed class PrometheusEndpointWorker : BackgroundService
         }
     }
 }
+// CoreWatch Atlas module: PrometheusEndpointWorker.

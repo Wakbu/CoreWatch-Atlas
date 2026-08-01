@@ -15,3 +15,7 @@ public sealed record MetricReport(double? Average, double? Maximum, double? Late
 // 추세 계산은 관측치가 부족하거나 사용량이 감소하는 경우 예측을 만들지 않는다.
 // 근거 없는 날짜를 표시하는 것보다 "예측 불가"가 운영 판단에 안전하다.
 public sealed record CapacityForecast(Guid AgentId, string HostName, double? CurrentUsedPercent, double? DailyGrowthPercent, double? DaysUntilFull);
+public sealed record PartitionCapacityForecast(string Id,string MountPoint,double? CurrentUsedPercent,double? DailyGrowthPercent,double? DaysUntilFull);
+public sealed record AssetInventory(Guid AgentId,string HostName,string OperatingSystem,string Architecture,string AgentVersion,string? IpAddress,string? Role,string? Owner,IReadOnlyList<string> Tags);
+public sealed record IncidentSummary(long AlertId,string Summary,IReadOnlyList<string> PossibleCauses,IReadOnlyList<AlertAction> Timeline);
+// CoreWatch Atlas module: OperationsModels.

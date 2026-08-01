@@ -305,3 +305,4 @@ public sealed class OperatorAuthenticationTests
         public void Advance(TimeSpan duration) => _utcNow = _utcNow.Add(duration);
     }
 }
+// CoreWatch Atlas module: OperatorAuthenticationTests.

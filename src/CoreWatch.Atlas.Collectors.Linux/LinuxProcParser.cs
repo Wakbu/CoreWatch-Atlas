@@ -194,3 +194,4 @@ internal readonly record struct CpuSample(
     ulong Total,
     ulong Idle,
     int LogicalProcessorCount);
+// CoreWatch Atlas module: LinuxProcParser.

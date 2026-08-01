@@ -171,3 +171,4 @@ public sealed partial class AtlasDatabase
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }
+// CoreWatch Atlas module: AtlasDatabase.Lifecycle.

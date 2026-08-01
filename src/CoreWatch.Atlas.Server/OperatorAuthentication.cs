@@ -48,6 +48,9 @@ public sealed record OperatorSummary(
     string Role,
     bool Enabled,
     DateTimeOffset CreatedAtUtc);
+public sealed record OperatorCreateRequest(string Username,string Password,string Role);
+public sealed record OperatorUpdateRequest(string Role,bool Enabled);
+public sealed record OperatorAuditRecord(long Id,Guid? OperatorId,string EventType,string? RemoteAddress,DateTimeOffset OccurredAtUtc);
 
 public sealed record OperatorLoginRequest(
     [property: Required, StringLength(64, MinimumLength = 3)] string Username,
@@ -65,3 +68,4 @@ public enum OperatorLoginStatus
 public sealed record OperatorLoginResult(
     OperatorLoginStatus Status,
     OperatorIdentity? Identity);
+// CoreWatch Atlas module: OperatorAuthentication.

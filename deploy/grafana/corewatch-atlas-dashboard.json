@@ -1,0 +1,13 @@
+{
+  "title": "CoreWatch Atlas",
+  "uid": "corewatch-atlas",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {"type":"timeseries","title":"CPU usage","gridPos":{"h":8,"w":12,"x":0,"y":0},"targets":[{"expr":"corewatch_atlas_cpu_usage_ratio * 100","legendFormat":"{{host}}"}]},
+    {"type":"timeseries","title":"Available memory","gridPos":{"h":8,"w":12,"x":12,"y":0},"targets":[{"expr":"corewatch_atlas_memory_available_bytes","legendFormat":"{{host}}"}]},
+    {"type":"stat","title":"Unhealthy diagnostics","gridPos":{"h":6,"w":12,"x":0,"y":8},"targets":[{"expr":"sum(corewatch_atlas_diagnostic_healthy == 0)"}]},
+    {"type":"stat","title":"Active alerts","gridPos":{"h":6,"w":12,"x":12,"y":8},"targets":[{"expr":"sum(corewatch_atlas_active_alerts)"}]}
+  ]
+}
