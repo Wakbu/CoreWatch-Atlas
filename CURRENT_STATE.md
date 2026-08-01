@@ -171,3 +171,7 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 
 - `Atlas:ServerUpdate` stages an HTTPS SHA-256-verified package; Linux systemd applies it after shutdown with backup and rollback.
 - The self-signed enrollment CA endpoint now serves PEM for Linux `curl --cacert` compatibility.
+
+## 2026-08-01 GitHub update rate-limit fallback
+
+- When GitHub's unauthenticated releases API is rate-limited, the server resolves the latest release through GitHub's public `releases/latest/download` redirect and continues using the same SHA-256-verified package flow.
