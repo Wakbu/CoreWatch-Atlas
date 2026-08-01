@@ -51,6 +51,12 @@ public sealed class ServerApiTests
             "POLL_INTERVAL_MS=15_000");
         StringAssert.Contains(
             await script.Content.ReadAsStringAsync(),
+            "const canPollRender=view=>");
+        StringAssert.Contains(
+            await script.Content.ReadAsStringAsync(),
+            "if(r.view===\"enroll\"){title.textContent=\"Agent 등록\"");
+        StringAssert.Contains(
+            await script.Content.ReadAsStringAsync(),
             "data-lifecycle");
         StringAssert.Contains(
             await script.Content.ReadAsStringAsync(),

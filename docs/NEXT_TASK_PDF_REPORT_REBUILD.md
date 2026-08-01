@@ -45,3 +45,4 @@ Replace the current minimal text-only PDF report with a polished operations repo
 
 - Report implementation, focused tests, Debug/Release validation, dependency audit, Poppler rendering, ZIP/hash inspection, and local published-server readiness smoke test are complete for v1.1.4.
 - GitHub Release publication and deployment to `100.95.44.33` remain after the implementation PR is merged.
+- The enrollment route and periodic refresh were also isolated so a report or operations view cannot reset user input while polling.
