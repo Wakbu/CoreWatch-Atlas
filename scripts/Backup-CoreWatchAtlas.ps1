@@ -23,3 +23,4 @@ $hashManifest = Get-ChildItem -LiteralPath $target -Recurse -File |
     '{0} *{1}' -f $hash.Hash, $_.FullName.Substring($target.Length + 1)
   }
 Set-Content -LiteralPath (Join-Path $target 'SHA256.txt') -Value $hashManifest -Encoding utf8
+# CoreWatch Atlas operational script: Backup-CoreWatchAtlas.

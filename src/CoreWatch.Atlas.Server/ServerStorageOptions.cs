@@ -6,3 +6,4 @@ public sealed class ServerStorageOptions
 
     public string DatabasePath { get; set; } = "data/corewatch-atlas.db";
 }
+// CoreWatch Atlas module: ServerStorageOptions.

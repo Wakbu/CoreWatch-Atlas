@@ -12,3 +12,4 @@ public sealed class ServerTransmissionOptions
 
     public string Credential { get; set; } = string.Empty;
 }
+// CoreWatch Atlas module: ServerTransmissionOptions.

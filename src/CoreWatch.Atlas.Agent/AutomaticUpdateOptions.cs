@@ -32,3 +32,4 @@ internal sealed record AgentUpdateResult(
     string TargetVersion,
     string State,
     string? Detail);
+// CoreWatch Atlas module: AutomaticUpdateOptions.

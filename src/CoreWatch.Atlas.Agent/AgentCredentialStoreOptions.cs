@@ -6,3 +6,4 @@ public sealed class AgentCredentialStoreOptions
 
     public string Path { get; set; } = "data/agent-credentials";
 }
+// CoreWatch Atlas module: AgentCredentialStoreOptions.

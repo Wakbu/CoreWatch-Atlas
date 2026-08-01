@@ -121,3 +121,4 @@ internal sealed class FixtureWindowsSystemSource : IWindowsSystemSource
     public IReadOnlyList<WindowsNetworkIo> GetNetworkInterfaces() =>
         [new WindowsNetworkIo("interface-id", 3_000, 4_000)];
 }
+// CoreWatch Atlas module: WindowsCollectorTests.

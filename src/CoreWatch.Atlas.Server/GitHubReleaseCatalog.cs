@@ -28,13 +28,17 @@ internal sealed class GitHubReleaseCatalog(
             using var request = new HttpRequestMessage(HttpMethod.Get, $"repos/{settings.Repository}/releases/latest");
             request.Headers.UserAgent.Add(new ProductInfoHeaderValue("CoreWatch-Atlas", "1.0"));
             using var response = await clients.CreateClient("atlas-github-release").SendAsync(request, cancellationToken);
+            GitHubReleaseCandidate? candidate;
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogWarning("GitHub release lookup returned HTTP {StatusCode}.", (int)response.StatusCode);
-                return null;
+                logger.LogWarning("GitHub release API lookup returned HTTP {StatusCode}; trying the latest-download redirect.", (int)response.StatusCode);
+                candidate = await TryGetLatestDownloadCandidateAsync(settings.Repository, cancellationToken);
             }
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(cancellationToken));
-            var candidate = TryParse(document.RootElement);
+            else
+            {
+                using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(cancellationToken));
+                candidate = TryParse(document.RootElement);
+            }
             cached = candidate is null ? null : await ResolveHashesAsync(candidate, cancellationToken);
             expiresAtUtc = timeProvider.GetUtcNow().AddMinutes(Math.Clamp(settings.CacheMinutes, 5, 1440));
             return cached;
@@ -75,6 +79,25 @@ internal sealed class GitHubReleaseCatalog(
         return hash is { Length: 64 } && hash.All(Uri.IsHexDigit) ? hash.ToUpperInvariant() : null;
     }
 
+    private static async Task<GitHubReleaseCandidate?> TryGetLatestDownloadCandidateAsync(string repository, CancellationToken token)
+    {
+        using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+        using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
+        using var request = new HttpRequestMessage(HttpMethod.Head, $"https://github.com/{repository}/releases/latest/download/corewatch-atlas-server.zip");
+        request.Headers.UserAgent.Add(new ProductInfoHeaderValue("CoreWatch-Atlas", "1.0"));
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
+        if ((int)response.StatusCode is < 300 or >= 400 || response.Headers.Location is not { } location) return null;
+        var redirect = location.IsAbsoluteUri ? location : new Uri(new Uri("https://github.com"), location);
+        var parts = redirect.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var index = Array.FindIndex(parts, x => string.Equals(x, "download", StringComparison.Ordinal));
+        if (index < 0 || index + 1 >= parts.Length) return null;
+        var tag = parts[index + 1];
+        var version = tag.TrimStart('v', 'V');
+        if (!Version.TryParse(version, out _)) return null;
+        var baseUrl = $"https://github.com/{repository}/releases/download/{Uri.EscapeDataString(tag)}/";
+        return new GitHubReleaseCandidate(version, baseUrl + "corewatch-atlas-server.zip", baseUrl + "corewatch-atlas-server.zip.sha256.txt", baseUrl + "corewatch-atlas-agent.zip", baseUrl + "corewatch-atlas-agent.zip.sha256.txt");
+    }
+
     private static GitHubReleaseCandidate? Create(string version, JsonElement[] assets, string serverName, string agentName)
     {
         string? Url(string name) => assets.FirstOrDefault(x => x.TryGetProperty("name", out var n) && n.GetString() == name).TryGetProperty("browser_download_url", out var u) ? u.GetString() : null;
@@ -87,3 +110,4 @@ internal sealed class GitHubReleaseCatalog(
 }
 
 internal sealed record GitHubReleaseCandidate(string Version, string ServerPackageUrl, string ServerHashUrl, string AgentPackageUrl, string AgentHashUrl);
+// CoreWatch Atlas module: GitHubReleaseCatalog.

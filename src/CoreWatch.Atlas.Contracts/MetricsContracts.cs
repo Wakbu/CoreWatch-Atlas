@@ -160,7 +160,9 @@ public sealed class SystemMetricsSnapshot
         MemoryMetrics memory,
         IEnumerable<FileSystemMetrics> fileSystems,
         IEnumerable<DiskIoMetrics> disks,
-        IEnumerable<NetworkInterfaceMetrics> networkInterfaces)
+        IEnumerable<NetworkInterfaceMetrics> networkInterfaces,
+        IEnumerable<MonitoredServiceMetrics>? services = null,
+        IEnumerable<DiagnosticCheckMetrics>? diagnostics = null)
     {
         if (capturedAtUtc.Offset != TimeSpan.Zero)
         {
@@ -191,6 +193,16 @@ public sealed class SystemMetricsSnapshot
             networkInterfaces,
             static item => item.Name,
             nameof(networkInterfaces));
+        // 서비스 상태는 선택 값이다. 기존 Agent와 이전 Snapshot은 빈 목록으로 처리해
+        // 계약 확장 후에도 저장된 이력과 구 버전 Agent를 그대로 읽을 수 있게 한다.
+        Services = ContractGuard.CopyUnique(
+            services ?? [],
+            static item => item.Name,
+            nameof(services));
+        Diagnostics = ContractGuard.CopyUnique(
+            diagnostics ?? [],
+            static item => item.Id,
+            nameof(diagnostics));
     }
 
     public DateTimeOffset CapturedAtUtc { get; }
@@ -208,6 +220,41 @@ public sealed class SystemMetricsSnapshot
     public IReadOnlyList<DiskIoMetrics> Disks { get; }
 
     public IReadOnlyList<NetworkInterfaceMetrics> NetworkInterfaces { get; }
+
+    public IReadOnlyList<MonitoredServiceMetrics> Services { get; }
+
+    public IReadOnlyList<DiagnosticCheckMetrics> Diagnostics { get; }
+}
+
+// 서비스 모니터링은 전체 OS 서비스 목록을 무분별하게 전송하지 않는다. 운영자가 지정한
+// 서비스만 수집하도록 하며, 상태 문자열은 Windows와 Linux의 차이를 숨기는 공통 값이다.
+public sealed class MonitoredServiceMetrics
+{
+    public MonitoredServiceMetrics(string name, string status)
+    {
+        Name = ContractGuard.NotWhiteSpace(name);
+        Status = ContractGuard.NotWhiteSpace(status);
+    }
+
+    public string Name { get; }
+    public string Status { get; }
+}
+
+// 프로세스, 컨테이너, URL 등 서로 다른 검사 결과를 동일한 상태/상세 형식으로 전달한다.
+// Detail은 비밀 값이나 명령줄을 넣지 않는 짧은 운영 메시지로 제한한다.
+public sealed class DiagnosticCheckMetrics
+{
+    public DiagnosticCheckMetrics(string id, string kind, string status, string? detail = null)
+    {
+        Id = ContractGuard.NotWhiteSpace(id);
+        Kind = ContractGuard.NotWhiteSpace(kind);
+        Status = ContractGuard.NotWhiteSpace(status);
+        Detail = detail?.Length > 240 ? throw new ArgumentOutOfRangeException(nameof(detail)) : detail;
+    }
+    public string Id { get; }
+    public string Kind { get; }
+    public string Status { get; }
+    public string? Detail { get; }
 }
 
 internal static class ContractGuard
@@ -252,3 +299,4 @@ internal static class ContractGuard
         return Array.AsReadOnly(items);
     }
 }
+// CoreWatch Atlas module: MetricsContracts.

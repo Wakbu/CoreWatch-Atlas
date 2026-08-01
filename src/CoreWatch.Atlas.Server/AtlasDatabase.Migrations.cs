@@ -9,11 +9,14 @@ public sealed partial class AtlasDatabase
         SqliteTransaction transaction,
         string columnName,
         string definition,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string tableName = "agents")
     {
         await using var query = connection.CreateCommand();
         query.Transaction = transaction;
-        query.CommandText = "PRAGMA table_info(agents);";
+        if (!new[] { "agents", "asset_metadata", "alert_rules", "alerts", "notification_channels", "maintenance_windows" }.Contains(tableName, StringComparer.Ordinal))
+            throw new ArgumentOutOfRangeException(nameof(tableName));
+        query.CommandText = $"PRAGMA table_info({tableName});";
         await using var reader = await query.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
@@ -26,7 +29,7 @@ public sealed partial class AtlasDatabase
         await reader.DisposeAsync();
         await using var alter = connection.CreateCommand();
         alter.Transaction = transaction;
-        alter.CommandText = $"ALTER TABLE agents ADD COLUMN {columnName} {definition};";
+        alter.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {definition};";
         await alter.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -93,3 +96,4 @@ public sealed partial class AtlasDatabase
             transaction);
     }
 }
+// CoreWatch Atlas module: AtlasDatabase.Migrations.

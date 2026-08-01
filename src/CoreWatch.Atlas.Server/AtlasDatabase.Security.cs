@@ -192,3 +192,4 @@ public sealed partial class AtlasDatabase
     private static string CreateAgentCredential() =>
         $"catlas_agent_{WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32))}";
 }
+// CoreWatch Atlas module: AtlasDatabase.Security.

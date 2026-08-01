@@ -56,3 +56,4 @@ internal static partial class MetricsCollectionLog
         Message = "Prometheus endpoint listening at {Url}/metrics.")]
     public static partial void PrometheusStarted(ILogger logger, string url);
 }
+// CoreWatch Atlas module: MetricsCollectionLog.

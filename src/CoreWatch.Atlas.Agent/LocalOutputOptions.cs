@@ -15,3 +15,4 @@ public sealed class PrometheusEndpointOptions
 
     public string Url { get; set; } = "http://127.0.0.1:9464";
 }
+// CoreWatch Atlas module: LocalOutputOptions.

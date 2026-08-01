@@ -47,3 +47,4 @@ internal interface IWindowsSystemSource
 
     IReadOnlyList<WindowsNetworkIo> GetNetworkInterfaces();
 }
+// CoreWatch Atlas module: WindowsMetricsTypes.

@@ -1,6 +1,6 @@
 # CoreWatch-Atlas 현재 상태
 
-마지막 갱신: 2026-07-30
+마지막 갱신: 2026-08-02
 새 채팅이나 작업자는 이 문서, `AGENTS.md`, `docs/NEXT_STEPS.md`와 관련 설계를 먼저 읽는다.
 
 ## 제품 경계
@@ -13,6 +13,13 @@
 - 코드, README, 버전, 태그, CI와 Release를 공유하지 않는다.
 
 ## 현재 구현
+
+## v1.1.0 릴리스 상태
+
+- GitHub Release `v1.1.0`, Server/Agent DLL 버전 `1.1.0.0`, schema version `11`
+- 자동 업데이트 패키지의 DLL 버전과 Release manifest 버전을 일치시켜 Server Update Installer의 버전 검증·롤백 문제를 수정했다.
+- Debug/Release 전체 테스트 `81/81` 통과, 패키지 SHA-256·게시본 Server/Agent 스모크 테스트 완료
+- 운영 Server 실제 적용 상태는 SSH 키 인증이 없어 이 환경에서 직접 조회하지 못했다.
 
 Windows·Linux Agent가 보호 저장소의 자격 증명으로 HTTPS 중앙 Server에 지표를 전송하고, 인증된 반응형 Web 대시보드에서 여러 장비의 최신 상태와 최근 24시간 이력을 확인할 수 있는 단계다.
 
@@ -164,3 +171,14 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 
 - `Atlas:ServerUpdate` stages an HTTPS SHA-256-verified package; Linux systemd applies it after shutdown with backup and rollback.
 - The self-signed enrollment CA endpoint now serves PEM for Linux `curl --cacert` compatibility.
+
+## 2026-08-01 GitHub update rate-limit fallback
+
+- When GitHub's unauthenticated releases API is rate-limited, the server resolves the latest release through GitHub's public `releases/latest/download` redirect and continues using the same SHA-256-verified package flow.
+
+## 2026-08-02 PDF report rebuild / PDF 보고서 재구축
+
+- v1.1.4 후보에서 기존 8줄 텍스트 PDF를 KPI 카드, 임계치 추세 차트, 경고·조치 이력, 파티션 용량 예측과 서버 상세를 포함한 다중 페이지 운영 보고서로 교체했다. / In the v1.1.4 candidate, replaced the eight-line text PDF with a multi-page operations report containing KPI cards, threshold trend charts, alert/action history, partition capacity forecasts, and server details.
+- 서버별 보고서와 Fleet 일일 보고서는 동일한 시각 체계를 사용하며 CSV는 UTF-8 BOM과 동등한 원시 데이터 섹션을 제공한다. / Per-server and fleet daily reports share one visual system, while CSV exports retain a UTF-8 BOM and equivalent raw-data sections.
+- Agent 등록 해시 경로는 새로고침 후에도 유지하고, 15초 자동 갱신은 대시보드·서버 목록과 서버 상세 차트만 갱신하도록 제한했다. / The Agent enrollment hash route now survives refresh, and the 15-second polling refresh is limited to dashboard/server lists and detail charts.
+- Debug/Release 전체 테스트 85개, 패키지 취약점 감사, Poppler PNG 시각 검수, v1.1.4 ZIP·SHA-256 및 게시본 `/health/ready` 스모크 테스트를 통과했다. GitHub Release와 운영 배포는 코드 병합 후 진행한다. / All 85 Debug/Release tests, package vulnerability audit, Poppler PNG visual QA, v1.1.4 ZIP/SHA-256 checks, and the published-server `/health/ready` smoke test passed. GitHub Release and production deployment follow after merge.

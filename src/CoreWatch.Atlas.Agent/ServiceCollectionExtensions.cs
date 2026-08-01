@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(LocalOutputOptions.SectionName));
         services.Configure<ServerTransmissionOptions>(
             configuration.GetSection(ServerTransmissionOptions.SectionName));
+        services.Configure<DiagnosticsOptions>(configuration.GetSection(DiagnosticsOptions.SectionName));
         services
             .AddOptions<AutomaticUpdateOptions>()
             .Bind(configuration.GetSection(AutomaticUpdateOptions.SectionName))
@@ -33,6 +34,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<TextWriter>(static _ => Console.Out);
         services.TryAddSingleton<LatestMetricsSnapshotStore>();
+        services.TryAddSingleton<DiagnosticsConfigurationStore>();
         services.TryAddSingleton(
             static _ => new HttpClient(new SocketsHttpHandler
             {
@@ -47,7 +49,10 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<MetricsCollectionWorker>();
         services.AddHostedService<PrometheusEndpointWorker>();
         services.AddHostedService<AgentUpdateWorker>();
+        services.AddHostedService<AgentCommandWorker>();
+        services.AddHostedService<DiagnosticsConfigurationWorker>();
 
         return services;
     }
 }
+// CoreWatch Atlas module: ServiceCollectionExtensions.

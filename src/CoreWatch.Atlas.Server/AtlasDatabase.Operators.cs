@@ -104,6 +104,10 @@ public sealed partial class AtlasDatabase
 
         return operators;
     }
+    public async Task<bool> UpdateOperatorAsync(Guid id,OperatorUpdateRequest x,CancellationToken ct=default)
+    { if(!OperatorRoles.IsValid(x.Role))throw new ArgumentException("Invalid role.");await using var c=await OpenConnectionAsync(ct);await using var q=c.CreateCommand();q.CommandText="UPDATE atlas_operators SET role=$role,enabled=$enabled WHERE operator_id=$id AND ($role='Administrator' AND $enabled=1 OR role<>'Administrator' OR (SELECT COUNT(*) FROM atlas_operators WHERE role='Administrator' AND enabled=1)>1);";q.Parameters.AddWithValue("$role",x.Role);q.Parameters.AddWithValue("$enabled",x.Enabled?1:0);q.Parameters.AddWithValue("$id",id.ToString("D"));return await q.ExecuteNonQueryAsync(ct)==1; }
+    public async Task<IReadOnlyList<OperatorAuditRecord>> ListOperatorAuditAsync(int limit,CancellationToken ct=default)
+    { await using var c=await OpenConnectionAsync(ct);await using var q=c.CreateCommand();q.CommandText="SELECT id,operator_id,event_type,remote_address,occurred_at_utc FROM operator_authentication_audit ORDER BY occurred_at_utc DESC LIMIT $limit;";q.Parameters.AddWithValue("$limit",limit);await using var r=await q.ExecuteReaderAsync(ct);var result=new List<OperatorAuditRecord>();while(await r.ReadAsync(ct))result.Add(new(r.GetInt64(0),r.IsDBNull(1)?null:Guid.Parse(r.GetString(1)),r.GetString(2),r.IsDBNull(3)?null:r.GetString(3),DateTimeOffset.Parse(r.GetString(4),CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind)));return result; }
 
     public async Task<OperatorLoginResult> AuthenticateOperatorAsync(
         string? username,
@@ -409,3 +413,4 @@ public sealed partial class AtlasDatabase
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }
+// CoreWatch Atlas module: AtlasDatabase.Operators.

@@ -152,3 +152,4 @@ public sealed partial class AtlasDatabase
             DateTimeOffset.Parse(reader.GetString(7), CultureInfo.InvariantCulture),
             DateTimeOffset.Parse(reader.GetString(8), CultureInfo.InvariantCulture));
 }
+// CoreWatch Atlas module: AtlasDatabase.AgentUpdates.

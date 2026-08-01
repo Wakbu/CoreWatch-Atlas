@@ -208,3 +208,4 @@ internal static class AgentUpdateInstaller
                 new AgentUpdateResult(
                     handoff.DeploymentId, handoff.TargetVersion, state, detail)));
 }
+// CoreWatch Atlas module: AgentUpdateInstaller.

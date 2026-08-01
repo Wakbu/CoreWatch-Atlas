@@ -127,3 +127,4 @@ public static class ServerSecurity
         }
     }
 }
+// CoreWatch Atlas module: ServerSecurity.

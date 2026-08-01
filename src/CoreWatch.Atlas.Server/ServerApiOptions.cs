@@ -10,3 +10,4 @@ public sealed class ServerApiOptions
 
     public int CleanupIntervalMinutes { get; set; } = 60;
 }
+// CoreWatch Atlas module: ServerApiOptions.

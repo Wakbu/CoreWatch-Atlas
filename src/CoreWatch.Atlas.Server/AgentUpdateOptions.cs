@@ -23,3 +23,4 @@ public sealed record AgentUpdateDeployment(
     string? Detail,
     DateTimeOffset RequestedAtUtc,
     DateTimeOffset UpdatedAtUtc);
+// CoreWatch Atlas module: AgentUpdateOptions.
