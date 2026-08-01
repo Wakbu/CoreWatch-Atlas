@@ -133,3 +133,4 @@ public sealed class LinuxSystemMetricsCollector : ISystemMetricsCollector
         }
     }
 }
+// CoreWatch Atlas module: LinuxSystemMetricsCollector.

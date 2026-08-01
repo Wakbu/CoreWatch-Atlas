@@ -14,3 +14,4 @@ public sealed class DiagnosticsMetricsTests
         StringAssert.Contains(output,"corewatch_atlas_diagnostic_healthy{id=\"tcp:db:5432\",kind=\"port\",status=\"open\"} 1");
     }
 }
+// CoreWatch Atlas module: DiagnosticsMetricsTests.

@@ -20,3 +20,4 @@ internal static class ServiceDiagnostics
         return result;
     }
 }
+// CoreWatch Atlas module: ServiceDiagnostics.

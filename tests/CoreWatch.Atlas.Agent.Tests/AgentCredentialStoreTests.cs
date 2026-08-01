@@ -113,3 +113,4 @@ public sealed class AgentCredentialStoreTests
             new NullFileProvider();
     }
 }
+// CoreWatch Atlas module: AgentCredentialStoreTests.

@@ -68,3 +68,4 @@ public enum OperatorLoginStatus
 public sealed record OperatorLoginResult(
     OperatorLoginStatus Status,
     OperatorIdentity? Identity);
+// CoreWatch Atlas module: OperatorAuthentication.

@@ -96,3 +96,4 @@ public sealed partial class AtlasDatabase
             transaction);
     }
 }
+// CoreWatch Atlas module: AtlasDatabase.Migrations.

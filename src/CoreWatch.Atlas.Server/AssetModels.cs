@@ -5,3 +5,4 @@ namespace CoreWatch.Atlas.Server;
 public sealed record AssetMetadata(Guid AgentId, string? Owner, string? Notes, string? Role, string? IpAddress, IReadOnlyList<string> Tags);
 public sealed record AssetMetadataRequest(string? Owner, string? Notes, string? Role, string? IpAddress, IReadOnlyList<string>? Tags);
 public sealed record AssetTag(long Id, string Name);
+// CoreWatch Atlas module: AssetModels.

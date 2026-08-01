@@ -66,3 +66,4 @@ public sealed class MetricsSnapshotPublisher
         await output.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 }
+// CoreWatch Atlas module: MetricsSnapshotPublisher.

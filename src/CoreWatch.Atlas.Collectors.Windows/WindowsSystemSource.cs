@@ -270,3 +270,4 @@ internal static class WindowsNative
         out int bytesReturned,
         nint overlapped);
 }
+// CoreWatch Atlas module: WindowsSystemSource.

@@ -1258,3 +1258,4 @@ static IReadOnlyList<PartitionCapacityForecast> BuildPartitionForecasts(IReadOnl
 }
 
 public partial class Program;
+// CoreWatch Atlas module: Program.

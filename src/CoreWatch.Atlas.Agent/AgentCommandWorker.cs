@@ -20,3 +20,4 @@ internal sealed class AgentCommandWorker(AtlasServerClient server,DiagnosticsCon
         catch(Exception e){await server.ReportCommandAsync(command.Id,"failed",e.Message.Length>240?e.Message[..240]:e.Message,token);}
     }
 }
+// CoreWatch Atlas module: AgentCommandWorker.

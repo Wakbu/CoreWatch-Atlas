@@ -88,3 +88,4 @@ public sealed partial class AtlasDatabase
     private static void AddChannel(SqliteCommand q,NotificationChannelRequest x){q.Parameters.AddWithValue("$name",x.Name.Trim());q.Parameters.AddWithValue("$url",x.Url.Trim());q.Parameters.AddWithValue("$enabled",x.Enabled?1:0);q.Parameters.AddWithValue("$type",x.ChannelType);q.Parameters.AddWithValue("$template",(object?)x.Template??DBNull.Value);}
     private static string RedactChannel(string value,string type){if(type=="email")return value;return Uri.TryCreate(value,UriKind.Absolute,out var uri)?$"{uri.Scheme}://{uri.Host}/***":"***";}
 }
+// CoreWatch Atlas module: AtlasDatabase.Alerts.

@@ -19,3 +19,4 @@ internal sealed record ServerUpdateHandoff(
     string InstallDirectory,
     string BackupDirectory,
     string Sha256);
+// CoreWatch Atlas module: ServerUpdateOptions.

@@ -270,3 +270,4 @@ public sealed class MetricsCollectionWorkerTests
         public IFileProvider ContentRootFileProvider { get; set; } = null!;
     }
 }
+// CoreWatch Atlas module: MetricsCollectionWorkerTests.

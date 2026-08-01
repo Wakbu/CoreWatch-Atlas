@@ -76,3 +76,4 @@ public sealed record SnapshotNetworkInterface(
     string Name,
     ulong ReceiveBytesTotal,
     ulong TransmitBytesTotal);
+// CoreWatch Atlas module: SnapshotUploadRequest.

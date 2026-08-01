@@ -110,3 +110,4 @@ internal sealed class GitHubReleaseCatalog(
 }
 
 internal sealed record GitHubReleaseCandidate(string Version, string ServerPackageUrl, string ServerHashUrl, string AgentPackageUrl, string AgentHashUrl);
+// CoreWatch Atlas module: GitHubReleaseCatalog.

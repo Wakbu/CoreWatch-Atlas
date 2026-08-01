@@ -299,3 +299,4 @@ internal static class ContractGuard
         return Array.AsReadOnly(items);
     }
 }
+// CoreWatch Atlas module: MetricsContracts.

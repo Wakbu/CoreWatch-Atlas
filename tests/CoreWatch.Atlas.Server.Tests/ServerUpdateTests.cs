@@ -71,3 +71,4 @@ public sealed class ServerUpdateTests
         return path;
     }
 }
+// CoreWatch Atlas module: ServerUpdateTests.

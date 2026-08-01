@@ -27,3 +27,4 @@ public sealed record SnapshotRecord(
     JsonElement Metrics);
 
 public sealed record AgentDeletionRequest(bool DeleteSnapshots);
+// CoreWatch Atlas module: ServerApiModels.

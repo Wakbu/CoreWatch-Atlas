@@ -33,3 +33,4 @@ public sealed partial class AtlasDatabase
     private static void ValidateGroup(ServerGroupRequest x)
     { if(string.IsNullOrWhiteSpace(x.Name)||x.Name.Length>64||x.Description?.Length>240) throw new ArgumentException("Invalid server group."); }
 }
+// CoreWatch Atlas module: AtlasDatabase.Operations.

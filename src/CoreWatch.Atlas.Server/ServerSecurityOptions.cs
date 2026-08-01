@@ -12,3 +12,4 @@ public sealed class ServerSecurityOptions
 
     public int HstsMaxAgeDays { get; set; } = 365;
 }
+// CoreWatch Atlas module: ServerSecurityOptions.

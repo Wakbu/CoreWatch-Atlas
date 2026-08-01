@@ -197,3 +197,4 @@ public static class PrometheusMetricsFormatter
         .Replace("\n", "\\n", StringComparison.Ordinal)
         .Replace("\"", "\\\"", StringComparison.Ordinal);
 }
+// CoreWatch Atlas module: PrometheusMetricsFormatter.

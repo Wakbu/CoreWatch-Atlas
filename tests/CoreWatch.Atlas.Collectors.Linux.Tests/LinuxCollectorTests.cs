@@ -181,3 +181,4 @@ internal sealed class FixtureSystemSource : ILinuxSystemSource
     public IReadOnlyList<LinuxFileSystem> GetFileSystems() =>
         [new LinuxFileSystem("root", "/", 10_000, 4_000)];
 }
+// CoreWatch Atlas module: LinuxCollectorTests.

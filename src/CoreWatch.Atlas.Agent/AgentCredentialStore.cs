@@ -157,3 +157,4 @@ internal sealed class AgentCredentialStore
         }
     }
 }
+// CoreWatch Atlas module: AgentCredentialStore.

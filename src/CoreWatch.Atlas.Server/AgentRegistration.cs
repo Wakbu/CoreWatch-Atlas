@@ -16,3 +16,4 @@ public sealed record RegisteredAgent(
 public sealed record IssuedRegistrationToken(
     string Value,
     DateTimeOffset ExpiresAtUtc);
+// CoreWatch Atlas module: AgentRegistration.

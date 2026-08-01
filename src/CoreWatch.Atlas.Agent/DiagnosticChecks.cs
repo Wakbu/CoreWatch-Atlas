@@ -52,3 +52,4 @@ internal static class DiagnosticChecks
         try { if(OperatingSystem.IsLinux()){var start=new ProcessStartInfo("apt-get"){RedirectStandardOutput=true,RedirectStandardError=true,UseShellExecute=false,CreateNoWindow=true};start.ArgumentList.Add("-s");start.ArgumentList.Add("upgrade");using var p=Process.Start(start)!;var output=p.StandardOutput.ReadToEnd();p.WaitForExit(15000);if(!p.HasExited){p.Kill(true);return new("os:update-status","os-update","unknown","check timeout");}var count=output.Split('\n').Count(x=>x.StartsWith("Inst ",StringComparison.Ordinal));return new("os:update-status","os-update",count==0?"current":"updates-available",$"{count} package(s)");}return new("os:update-status","os-update","managed-by-windows-update"); } catch { return new("os:update-status","os-update","unknown"); }
     }
 }
+// CoreWatch Atlas module: DiagnosticChecks.

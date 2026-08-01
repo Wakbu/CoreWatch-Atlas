@@ -18,3 +18,4 @@ public sealed record CapacityForecast(Guid AgentId, string HostName, double? Cur
 public sealed record PartitionCapacityForecast(string Id,string MountPoint,double? CurrentUsedPercent,double? DailyGrowthPercent,double? DaysUntilFull);
 public sealed record AssetInventory(Guid AgentId,string HostName,string OperatingSystem,string Architecture,string AgentVersion,string? IpAddress,string? Role,string? Owner,IReadOnlyList<string> Tags);
 public sealed record IncidentSummary(long AlertId,string Summary,IReadOnlyList<string> PossibleCauses,IReadOnlyList<AlertAction> Timeline);
+// CoreWatch Atlas module: OperationsModels.

@@ -6,3 +6,4 @@ public sealed class RegistrationOptions
 
     public int TokenLifetimeMinutes { get; set; } = 15;
 }
+// CoreWatch Atlas module: RegistrationOptions.

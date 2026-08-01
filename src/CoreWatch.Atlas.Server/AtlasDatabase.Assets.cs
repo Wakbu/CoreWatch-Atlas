@@ -61,3 +61,4 @@ public sealed partial class AtlasDatabase
     private static void ValidateAsset(AssetMetadataRequest x)
     { if(x.Owner?.Length>100||x.Notes?.Length>2000||x.Role?.Length>80||x.IpAddress?.Length>64||(x.Tags?.Any(t=>t.Length>48)??false))throw new ArgumentException("Invalid asset metadata."); }
 }
+// CoreWatch Atlas module: AtlasDatabase.Assets.

@@ -14,3 +14,4 @@ public sealed class ReportExportTests
         StringAssert.EndsWith(text,"%%EOF");
     }
 }
+// CoreWatch Atlas module: ReportExportTests.

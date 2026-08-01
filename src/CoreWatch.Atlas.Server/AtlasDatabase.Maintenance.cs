@@ -10,3 +10,4 @@ public sealed partial class AtlasDatabase
     public async Task<bool> IsMaintenanceActiveAsync(CancellationToken ct=default)
     { await using var c=await OpenConnectionAsync(ct);await using var q=c.CreateCommand();q.CommandText="SELECT EXISTS(SELECT 1 FROM maintenance_windows WHERE starts_at_utc<=strftime('%Y-%m-%dT%H:%M:%fZ','now') AND ends_at_utc>strftime('%Y-%m-%dT%H:%M:%fZ','now'));";return Convert.ToInt64(await q.ExecuteScalarAsync(ct))==1; }
 }
+// CoreWatch Atlas module: AtlasDatabase.Maintenance.

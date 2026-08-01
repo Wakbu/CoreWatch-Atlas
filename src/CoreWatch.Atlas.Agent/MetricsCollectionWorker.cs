@@ -112,3 +112,4 @@ public sealed class MetricsCollectionWorker : BackgroundService
         MetricsCollectionLog.Stopped(logger, collector.Platform);
     }
 }
+// CoreWatch Atlas module: MetricsCollectionWorker.

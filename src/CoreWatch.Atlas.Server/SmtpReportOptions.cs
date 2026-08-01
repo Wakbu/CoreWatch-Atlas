@@ -16,3 +16,4 @@ public sealed class SmtpReportOptions
     public bool AttachCsv { get; set; } = true;
     public bool AttachPdf { get; set; } = true;
 }
+// CoreWatch Atlas module: SmtpReportOptions.

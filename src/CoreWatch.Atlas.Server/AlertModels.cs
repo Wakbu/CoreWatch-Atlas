@@ -15,3 +15,4 @@ public sealed record AlertAction(long Id,long AlertId,string ActionType,string A
 public sealed record AlertActionRequest(string? Note,string? Assignee,bool Resolve=false);
 public sealed record NotificationChannel(long Id, string Name, string Url, bool Enabled, string ChannelType="generic", string? Template=null);
 public sealed record NotificationChannelRequest(string Name, string Url, bool Enabled, string ChannelType="generic", string? Template=null);
+// CoreWatch Atlas module: AlertModels.

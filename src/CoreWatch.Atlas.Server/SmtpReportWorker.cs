@@ -29,3 +29,4 @@ internal sealed class SmtpReportWorker(AtlasDatabase database, IOptions<SmtpRepo
         await client.SendMailAsync(mail,token);
     }
 }
+// CoreWatch Atlas module: SmtpReportWorker.

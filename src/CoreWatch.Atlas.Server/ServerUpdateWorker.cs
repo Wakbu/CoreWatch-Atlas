@@ -115,3 +115,4 @@ internal sealed class ServerUpdateWorker(
         }
     }
 }
+// CoreWatch Atlas module: ServerUpdateWorker.

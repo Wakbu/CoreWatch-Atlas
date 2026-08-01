@@ -10,3 +10,4 @@ public sealed class GitHubReleaseOptions
 }
 
 public sealed record PublishedRelease(string Version, string ServerPackageUrl, string ServerSha256, string AgentPackageUrl, string AgentSha256);
+// CoreWatch Atlas module: GitHubReleaseOptions.

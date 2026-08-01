@@ -15,3 +15,4 @@ public sealed class DiagnosticsOptions
     public string[] PingTargets { get; set; } = [];
     public string[] BackupPaths { get; set; } = [];
 }
+// CoreWatch Atlas module: DiagnosticsOptions.

@@ -518,3 +518,4 @@ public sealed partial class AtlasDatabase
     private static string FormatTimestamp(DateTimeOffset value) =>
         value.ToString("O", CultureInfo.InvariantCulture);
 }
+// CoreWatch Atlas module: AtlasDatabase.

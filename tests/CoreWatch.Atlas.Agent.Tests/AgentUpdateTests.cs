@@ -151,3 +151,4 @@ public sealed class AgentUpdateTests
             });
     }
 }
+// CoreWatch Atlas module: AgentUpdateTests.

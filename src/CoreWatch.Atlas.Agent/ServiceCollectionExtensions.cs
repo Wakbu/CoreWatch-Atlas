@@ -55,3 +55,4 @@ public static class ServiceCollectionExtensions
         return services;
     }
 }
+// CoreWatch Atlas module: ServiceCollectionExtensions.

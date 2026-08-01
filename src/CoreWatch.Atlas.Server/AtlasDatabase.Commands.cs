@@ -15,3 +15,4 @@ public sealed partial class AtlasDatabase
     public async Task<IReadOnlyList<AgentCommandRecord>> ListAgentCommandsAsync(Guid agentId,CancellationToken ct=default)
     { await using var c=await OpenConnectionAsync(ct);await using var q=c.CreateCommand();q.CommandText="SELECT id,command_type,target,state,detail,requested_by,requested_at_utc,updated_at_utc FROM agent_commands WHERE agent_id=$agent ORDER BY id DESC LIMIT 100;";q.Parameters.AddWithValue("$agent",agentId.ToString("D"));await using var r=await q.ExecuteReaderAsync(ct);var result=new List<AgentCommandRecord>();while(await r.ReadAsync(ct))result.Add(new(r.GetInt64(0),agentId,r.GetString(1),r.GetString(2),r.GetString(3),r.IsDBNull(4)?null:r.GetString(4),r.GetString(5),ParseTimestamp(r.GetString(6)),ParseTimestamp(r.GetString(7))));return result; }
 }
+// CoreWatch Atlas module: AtlasDatabase.Commands.

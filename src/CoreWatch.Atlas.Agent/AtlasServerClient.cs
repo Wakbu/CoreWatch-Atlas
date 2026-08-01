@@ -203,3 +203,4 @@ public sealed class AtlasServerClient
         return request;
     }
 }
+// CoreWatch Atlas module: AtlasServerClient.

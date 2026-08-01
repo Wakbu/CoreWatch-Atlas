@@ -25,3 +25,4 @@ internal static class ReportExports
     private static string Escape(string x)=>x.Replace("\\","\\\\").Replace("(","\\(").Replace(")","\\)");
     private static string Ascii(string x)=>new(x.Select(c=>c<=127?c:'?').ToArray());
 }
+// CoreWatch Atlas module: ReportExports.
