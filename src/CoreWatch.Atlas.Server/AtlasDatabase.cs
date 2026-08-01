@@ -9,7 +9,7 @@ namespace CoreWatch.Atlas.Server;
 
 public sealed partial class AtlasDatabase
 {
-    public const int CurrentSchemaVersion = 9;
+    public const int CurrentSchemaVersion = 11;
 
     private readonly string _connectionString;
     private readonly TimeProvider _timeProvider;
@@ -137,6 +137,30 @@ public sealed partial class AtlasDatabase
                 CREATE TABLE IF NOT EXISTS maintenance_windows (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,starts_at_utc TEXT NOT NULL,ends_at_utc TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS ix_maintenance_windows_time ON maintenance_windows(starts_at_utc,ends_at_utc);
                 INSERT OR IGNORE INTO schema_migrations(version,applied_at_utc) VALUES(9,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+                """, cancellationToken, transaction);
+
+            await ExecuteNonQueryAsync(connection, """
+                CREATE TABLE IF NOT EXISTS asset_metadata (agent_id TEXT PRIMARY KEY,owner TEXT NULL,notes TEXT NULL,FOREIGN KEY(agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE);
+                INSERT OR IGNORE INTO schema_migrations(version,applied_at_utc) VALUES(10,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+                """, cancellationToken, transaction);
+
+            await EnsureColumnAsync(connection, transaction, "role", "TEXT NULL", cancellationToken, "asset_metadata");
+            await EnsureColumnAsync(connection, transaction, "ip_address", "TEXT NULL", cancellationToken, "asset_metadata");
+            await EnsureColumnAsync(connection, transaction, "agent_id", "TEXT NULL", cancellationToken, "maintenance_windows");
+            await EnsureColumnAsync(connection, transaction, "group_id", "INTEGER NULL", cancellationToken, "maintenance_windows");
+            await ExecuteNonQueryAsync(connection, """
+                CREATE TABLE IF NOT EXISTS asset_tags (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL COLLATE NOCASE UNIQUE);
+                CREATE TABLE IF NOT EXISTS agent_asset_tags (agent_id TEXT NOT NULL,tag_id INTEGER NOT NULL,PRIMARY KEY(agent_id,tag_id),FOREIGN KEY(agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE,FOREIGN KEY(tag_id) REFERENCES asset_tags(id) ON DELETE CASCADE);
+                CREATE INDEX IF NOT EXISTS ix_agent_asset_tags_tag ON agent_asset_tags(tag_id);
+                CREATE TABLE IF NOT EXISTS alert_actions (id INTEGER PRIMARY KEY AUTOINCREMENT,alert_id INTEGER NOT NULL,action_type TEXT NOT NULL,actor TEXT NOT NULL,note TEXT NULL,assignee TEXT NULL,created_at_utc TEXT NOT NULL,FOREIGN KEY(alert_id) REFERENCES alerts(id) ON DELETE CASCADE);
+                CREATE INDEX IF NOT EXISTS ix_alert_actions_alert_time ON alert_actions(alert_id,created_at_utc);
+                CREATE TABLE IF NOT EXISTS alert_rule_violations (agent_id TEXT NOT NULL,rule_id INTEGER NOT NULL,started_at_utc TEXT NOT NULL,PRIMARY KEY(agent_id,rule_id),FOREIGN KEY(agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE,FOREIGN KEY(rule_id) REFERENCES alert_rules(id) ON DELETE CASCADE);
+                CREATE TABLE IF NOT EXISTS api_tokens (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,token_hash BLOB NOT NULL UNIQUE,scope TEXT NOT NULL,expires_at_utc TEXT NULL,revoked_at_utc TEXT NULL,created_by TEXT NOT NULL,created_at_utc TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS api_audit (id INTEGER PRIMARY KEY AUTOINCREMENT,token_id INTEGER NULL,method TEXT NOT NULL,path TEXT NOT NULL,status_code INTEGER NOT NULL,remote_address TEXT NULL,occurred_at_utc TEXT NOT NULL,FOREIGN KEY(token_id) REFERENCES api_tokens(id) ON DELETE SET NULL);
+                CREATE TABLE IF NOT EXISTS agent_commands (id INTEGER PRIMARY KEY AUTOINCREMENT,agent_id TEXT NOT NULL,command_type TEXT NOT NULL,target TEXT NOT NULL,state TEXT NOT NULL,detail TEXT NULL,requested_by TEXT NOT NULL,requested_at_utc TEXT NOT NULL,updated_at_utc TEXT NOT NULL,FOREIGN KEY(agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE);
+                CREATE INDEX IF NOT EXISTS ix_agent_commands_pending ON agent_commands(agent_id,state,requested_at_utc);
+                CREATE TABLE IF NOT EXISTS agent_diagnostic_config (agent_id TEXT PRIMARY KEY,payload_json TEXT NOT NULL,updated_at_utc TEXT NOT NULL,FOREIGN KEY(agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE);
+                INSERT OR IGNORE INTO schema_migrations(version,applied_at_utc) VALUES(11,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
                 """, cancellationToken, transaction);
 
             await ExecuteNonQueryAsync(
@@ -268,6 +292,17 @@ public sealed partial class AtlasDatabase
                 INSERT OR IGNORE INTO alert_rules(id,name,metric_type,threshold,severity,enabled) VALUES (1,'CPU critical','cpu',90,'critical',1),(2,'Memory critical','memory',90,'critical',1),(3,'Disk critical','disk',90,'critical',1),(4,'Agent offline','offline',45,'critical',1);
                 INSERT OR IGNORE INTO schema_migrations(version,applied_at_utc) VALUES(6,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
                 """, cancellationToken, transaction);
+
+            await EnsureColumnAsync(connection, transaction, "duration_seconds", "INTEGER NOT NULL DEFAULT 0", cancellationToken, "alert_rules");
+            await EnsureColumnAsync(connection, transaction, "renotify_minutes", "INTEGER NOT NULL DEFAULT 0", cancellationToken, "alert_rules");
+            await EnsureColumnAsync(connection, transaction, "escalate_minutes", "INTEGER NOT NULL DEFAULT 0", cancellationToken, "alert_rules");
+            await EnsureColumnAsync(connection, transaction, "assignee", "TEXT NULL", cancellationToken, "alert_rules");
+            await EnsureColumnAsync(connection, transaction, "target_agent_id", "TEXT NULL", cancellationToken, "alert_rules");
+            await EnsureColumnAsync(connection, transaction, "target_group_id", "INTEGER NULL", cancellationToken, "alert_rules");
+            await EnsureColumnAsync(connection, transaction, "assigned_to", "TEXT NULL", cancellationToken, "alerts");
+            await EnsureColumnAsync(connection, transaction, "last_notified_at_utc", "TEXT NULL", cancellationToken, "alerts");
+            await EnsureColumnAsync(connection, transaction, "channel_type", "TEXT NOT NULL DEFAULT 'generic'", cancellationToken, "notification_channels");
+            await EnsureColumnAsync(connection, transaction, "template", "TEXT NULL", cancellationToken, "notification_channels");
 
             await ExecuteNonQueryAsync(
                 connection,

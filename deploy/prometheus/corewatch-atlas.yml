@@ -1,0 +1,12 @@
+scrape_configs:
+  - job_name: corewatch-atlas-agents
+    scheme: http
+    static_configs:
+      - targets: ["agent-host:9187"]
+  - job_name: corewatch-atlas-server
+    scheme: https
+    metrics_path: /metrics/server
+    bearer_token_file: /etc/prometheus/secrets/corewatch-atlas.token
+    static_configs:
+      - targets: ["atlas.example.com"]
+    # Use a read-scoped API token in the bearer token file.

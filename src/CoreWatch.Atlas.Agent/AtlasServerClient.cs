@@ -75,7 +75,9 @@ public sealed class AtlasServerClient
             snapshot.Memory,
             snapshot.FileSystems,
             snapshot.Disks,
-            snapshot.NetworkInterfaces);
+            snapshot.NetworkInterfaces,
+            snapshot.Services,
+            snapshot.Diagnostics);
         var requestUri = new Uri(
             baseUri!,
             $"api/v1/agents/{agentId:D}/snapshots");
@@ -126,6 +128,17 @@ public sealed class AtlasServerClient
         using var response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
+
+    internal async Task<AgentCommand?> GetPendingCommandAsync(CancellationToken cancellationToken)
+    {
+        if(!enabled)return null;using var request=CreateAgentRequest(HttpMethod.Get,$"api/v1/agents/{agentId:D}/commands/pending");using var response=await httpClient.SendAsync(request,cancellationToken);if(response.StatusCode==System.Net.HttpStatusCode.NoContent)return null;response.EnsureSuccessStatusCode();return await response.Content.ReadFromJsonAsync<AgentCommand>(cancellationToken:cancellationToken);
+    }
+    internal async Task ReportCommandAsync(long id,string state,string? detail,CancellationToken cancellationToken)
+    {
+        if(!enabled)return;using var request=CreateAgentRequest(HttpMethod.Post,$"api/v1/agents/{agentId:D}/commands/{id}/status");request.Content=JsonContent.Create(new AgentCommandStatus(state,detail));using var response=await httpClient.SendAsync(request,cancellationToken);response.EnsureSuccessStatusCode();
+    }
+    internal async Task<DiagnosticsOptions?> GetDiagnosticsConfigurationAsync(CancellationToken cancellationToken)
+    { if(!enabled)return null;using var request=CreateAgentRequest(HttpMethod.Get,$"api/v1/agents/{agentId:D}/diagnostics/config");using var response=await httpClient.SendAsync(request,cancellationToken);response.EnsureSuccessStatusCode();return await response.Content.ReadFromJsonAsync<DiagnosticsOptions>(cancellationToken:cancellationToken); }
 
     internal async Task DownloadUpdateAsync(
         AgentUpdateManifest manifest,

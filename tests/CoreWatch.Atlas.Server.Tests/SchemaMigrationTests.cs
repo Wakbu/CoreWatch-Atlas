@@ -39,6 +39,14 @@ public sealed class SchemaMigrationTests
         CollectionAssert.Contains(tables, "authentication_audit");
         CollectionAssert.Contains(tables, "atlas_operators");
         CollectionAssert.Contains(tables, "operator_authentication_audit");
+        CollectionAssert.Contains(tables, "asset_tags");
+        CollectionAssert.Contains(tables, "alert_actions");
+        CollectionAssert.Contains(tables, "api_tokens");
+        CollectionAssert.Contains(tables, "agent_commands");
+        CollectionAssert.Contains(tables, "agent_diagnostic_config");
+        var ruleColumns = await ReadNamesAsync(connection, "PRAGMA table_info(alert_rules);", 1);
+        CollectionAssert.Contains(ruleColumns, "duration_seconds");
+        CollectionAssert.Contains(ruleColumns, "renotify_minutes");
         Assert.AreEqual((long)AtlasDatabase.CurrentSchemaVersion, (long)(await versionCommand.ExecuteScalarAsync())!);
     }
 

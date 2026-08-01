@@ -10,7 +10,9 @@ public sealed record SnapshotUploadRequest(
     SnapshotMemory Memory,
     IReadOnlyList<SnapshotFileSystem> FileSystems,
     IReadOnlyList<SnapshotDisk> Disks,
-    IReadOnlyList<SnapshotNetworkInterface> NetworkInterfaces)
+    IReadOnlyList<SnapshotNetworkInterface> NetworkInterfaces,
+    IReadOnlyList<MonitoredServiceMetrics>? Services = null,
+    IReadOnlyList<DiagnosticCheckMetrics>? Diagnostics = null)
 {
     public SystemMetricsSnapshot ToContract() =>
         new(
@@ -39,7 +41,9 @@ public sealed record SnapshotUploadRequest(
                 item => new NetworkInterfaceMetrics(
                     item.Name,
                     item.ReceiveBytesTotal,
-                    item.TransmitBytesTotal)));
+                    item.TransmitBytesTotal)),
+            Services,
+            Diagnostics);
 }
 
 public sealed record SnapshotAgent(

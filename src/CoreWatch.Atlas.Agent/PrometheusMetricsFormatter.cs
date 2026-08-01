@@ -30,6 +30,7 @@ public static class PrometheusMetricsFormatter
         AppendFileSystems(builder, snapshot.FileSystems);
         AppendDisks(builder, snapshot.Disks);
         AppendNetwork(builder, snapshot.NetworkInterfaces);
+        AppendDiagnostics(builder, snapshot);
         return builder.ToString();
     }
 
@@ -102,6 +103,14 @@ public static class PrometheusMetricsFormatter
             AppendSample(builder, "corewatch_atlas_network_transmit_bytes_total",
                 labels, networkInterface.TransmitBytesTotal);
         }
+    }
+
+    private static void AppendDiagnostics(StringBuilder builder, SystemMetricsSnapshot snapshot)
+    {
+        AppendHeader(builder,"corewatch_atlas_service_healthy","gauge","Configured service health (1 is healthy).");
+        foreach(var service in snapshot.Services) AppendSample(builder,"corewatch_atlas_service_healthy",$"{{service=\"{Escape(service.Name)}\",status=\"{Escape(service.Status)}\"}}",service.Status is "running" or "active"?1:0);
+        AppendHeader(builder,"corewatch_atlas_diagnostic_healthy","gauge","Configured diagnostic health (1 is healthy).");
+        foreach(var item in snapshot.Diagnostics) AppendSample(builder,"corewatch_atlas_diagnostic_healthy",$"{{id=\"{Escape(item.Id)}\",kind=\"{Escape(item.Kind)}\",status=\"{Escape(item.Status)}\"}}",item.Status is "running" or "healthy" or "open" or "current" or "not-required"?1:0);
     }
 
     private static void AppendGauge(

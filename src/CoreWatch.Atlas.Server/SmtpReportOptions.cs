@@ -12,4 +12,7 @@ public sealed class SmtpReportOptions
     public string Password { get; set; } = "";
     public string From { get; set; } = "";
     public string To { get; set; } = "";
+    public int SendHourUtc { get; set; }
+    public bool AttachCsv { get; set; } = true;
+    public bool AttachPdf { get; set; } = true;
 }
