@@ -840,6 +840,19 @@ app.MapGet("/api/v1/releases/latest", async (GitHubReleaseCatalog releases, Canc
     var release = await releases.GetLatestAsync(ct);
     return release is null ? Results.NoContent() : Results.Ok(release);
 }).RequireAuthorization(OperatorPolicies.View);
+// Exposes the installed Server version alongside the latest verified GitHub release for the dashboard.
+app.MapGet("/api/v1/version", async (GitHubReleaseCatalog releases, CancellationToken ct) =>
+{
+    var current = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+    var latest = await releases.GetLatestAsync(ct);
+    return Results.Ok(new
+    {
+        currentVersion = current,
+        latestVersion = latest?.Version,
+        updateAvailable = latest is not null && Version.TryParse(latest.Version, out var candidate)
+            && candidate > Version.Parse(current)
+    });
+}).RequireAuthorization(OperatorPolicies.View);
 app.MapPost("/api/v1/alert-rules", async ([FromBody] AlertRuleRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>{if(!await ValidateAntiforgeryAsync(c,a))return Results.BadRequest();try{return Results.Created("/api/v1/alert-rules",await s.CreateAlertRuleAsync(x,ct));}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization(OperatorPolicies.Admin);
 app.MapPut("/api/v1/alert-rules/{id:long}", async(long id,[FromBody] AlertRuleRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>{if(!await ValidateAntiforgeryAsync(c,a))return Results.BadRequest();try{return await s.UpdateAlertRuleAsync(id,x,ct)?Results.NoContent():Results.NotFound();}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization(OperatorPolicies.Admin);
 app.MapDelete("/api/v1/alert-rules/{id:long}", async(long id,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>!await ValidateAntiforgeryAsync(c,a)?Results.BadRequest():await s.DeleteAlertRuleAsync(id,ct)?Results.NoContent():Results.NotFound()).RequireAuthorization(OperatorPolicies.Admin);
