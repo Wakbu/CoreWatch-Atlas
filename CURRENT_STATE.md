@@ -128,6 +128,13 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - Release Server package now embeds `wwwroot/downloads/corewatch-atlas-agent.zip`; installer bootstrap scripts use the same HTTPS Server origin, so no third-party package URL or long-lived credential is exposed.
 - Verified Debug/Release builds and 70 automated tests; package inspection confirmed the embedded Agent ZIP and SHA-256 output.
 
+## 2026-08-01 Operations update / 운영 업데이트
+
+- GitHub Release의 Server·Agent ZIP과 SHA-256 자산을 자동으로 조회해 다음 자동 업데이트 대상으로 사용한다. / The server automatically reads Server and Agent ZIP plus SHA-256 assets from the latest GitHub Release for automatic update deployment.
+- Windows Agent credential keys are protected for the machine account so the Windows service can read the credential after registration. / Windows Agent credentials are protected for the machine account so the service can read them after registration.
+- 등록 명령은 Windows와 Linux에서 Atlas CA를 먼저 신뢰하고 필요한 런타임·압축 해제 도구를 설치한다. / Enrollment commands trust the Atlas CA first and install required runtime and archive tools on Windows and Linux.
+- 대시보드와 서버 목록은 한 줄에 최대 네 개 카드만 표시하며 Atlas 아이콘을 사용한다. / Dashboard and server pages show at most four cards per row and use the Atlas icon.
+
 ## 2026-07-30 Agent automatic update
 
 - Current branch: `main`. Latest pushed UI commits: `1154b65`, `4f477d3`, `1d14a12`.

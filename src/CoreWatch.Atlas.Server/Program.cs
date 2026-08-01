@@ -82,6 +82,12 @@ builder.Services
         "Enabled ServerUpdate requires Version, absolute PackageUrl and SHA-256.")
     .ValidateOnStart();
 builder.Services
+    .AddOptions<GitHubReleaseOptions>()
+    .Bind(builder.Configuration.GetSection(GitHubReleaseOptions.SectionName))
+    .Validate(options => options.CacheMinutes is >= 5 and <= 1440,
+        "GitHub release cache must be between 5 and 1440 minutes.")
+    .ValidateOnStart();
+builder.Services
     .AddOptions<ServerApiOptions>()
     .Bind(builder.Configuration.GetSection(ServerApiOptions.SectionName))
     .Validate(
@@ -158,6 +164,12 @@ builder.Services.AddHostedService<AlertMaintenanceWorker>();
 builder.Services.AddHostedService<AlertNotificationWorker>();
 builder.Services.AddHttpClient("atlas-server-update", client => client.Timeout = TimeSpan.FromMinutes(10));
 builder.Services.AddHostedService<ServerUpdateWorker>();
+builder.Services.AddHttpClient("atlas-github-release", client =>
+{
+    client.BaseAddress = new Uri("https://api.github.com/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+builder.Services.AddSingleton<GitHubReleaseCatalog>();
 
 var app = builder.Build();
 var database = app.Services.GetRequiredService<AtlasDatabase>();
@@ -632,6 +644,7 @@ app.MapPost(
         HttpContext context,
         IAntiforgery antiforgery,
         IOptions<AgentUpdateOptions> options,
+        GitHubReleaseCatalog releases,
         AtlasDatabase storage,
         CancellationToken cancellationToken) =>
     {
@@ -644,12 +657,24 @@ app.MapPost(
         {
             return Results.Forbid();
         }
-        if (!options.Value.Enabled)
+        var update = options.Value;
+        if (!update.Enabled)
         {
-            return Results.Conflict(new { error = "No Agent update release is configured." });
+            var published = await releases.GetLatestAsync(cancellationToken);
+            if (published is null)
+            {
+                return Results.Conflict(new { error = "No Agent update release is available." });
+            }
+            update = new AgentUpdateOptions
+            {
+                Enabled = true,
+                Version = published.Version,
+                PackageUrl = published.AgentPackageUrl,
+                Sha256 = published.AgentSha256,
+            };
         }
         var deployment = await storage.RequestAgentUpdateAsync(
-            agentId, operatorId.Value, options.Value, cancellationToken);
+            agentId, operatorId.Value, update, cancellationToken);
         return deployment is null
             ? Results.NotFound()
             : Results.Created($"/api/v1/agents/{agentId:D}/updates/{deployment.Id}", deployment);
@@ -754,6 +779,11 @@ app.MapDelete(
     })
     .RequireAuthorization(OperatorPolicies.Admin);
 app.MapGet("/api/v1/alert-rules", async (AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListAlertRulesAsync(ct))).RequireAuthorization(OperatorPolicies.View);
+app.MapGet("/api/v1/releases/latest", async (GitHubReleaseCatalog releases, CancellationToken ct) =>
+{
+    var release = await releases.GetLatestAsync(ct);
+    return release is null ? Results.NoContent() : Results.Ok(release);
+}).RequireAuthorization(OperatorPolicies.View);
 app.MapPost("/api/v1/alert-rules", async ([FromBody] AlertRuleRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>{if(!await ValidateAntiforgeryAsync(c,a))return Results.BadRequest();try{return Results.Created("/api/v1/alert-rules",await s.CreateAlertRuleAsync(x,ct));}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization(OperatorPolicies.Admin);
 app.MapPut("/api/v1/alert-rules/{id:long}", async(long id,[FromBody] AlertRuleRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>{if(!await ValidateAntiforgeryAsync(c,a))return Results.BadRequest();try{return await s.UpdateAlertRuleAsync(id,x,ct)?Results.NoContent():Results.NotFound();}catch(ArgumentException e){return Results.BadRequest(new{error=e.Message});}}).RequireAuthorization(OperatorPolicies.Admin);
 app.MapDelete("/api/v1/alert-rules/{id:long}", async(long id,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>!await ValidateAntiforgeryAsync(c,a)?Results.BadRequest():await s.DeleteAlertRuleAsync(id,ct)?Results.NoContent():Results.NotFound()).RequireAuthorization(OperatorPolicies.Admin);

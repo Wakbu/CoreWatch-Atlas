@@ -7,6 +7,7 @@ namespace CoreWatch.Atlas.Server;
 internal sealed class ServerUpdateWorker(
     IHttpClientFactory clients,
     IOptionsMonitor<ServerUpdateOptions> options,
+    GitHubReleaseCatalog releases,
     IHostApplicationLifetime lifetime,
     IHostEnvironment environment,
     ILogger<ServerUpdateWorker> logger) : BackgroundService
@@ -18,6 +19,22 @@ internal sealed class ServerUpdateWorker(
             try
             {
                 var settings = options.CurrentValue;
+                if (!settings.Enabled)
+                {
+                    var published = await releases.GetLatestAsync(stoppingToken);
+                    if (published is not null)
+                    {
+                        settings = new ServerUpdateOptions
+                        {
+                            Enabled = true,
+                            Version = published.Version,
+                            PackageUrl = published.ServerPackageUrl,
+                            Sha256 = published.ServerSha256,
+                            StatePath = settings.StatePath,
+                            CheckIntervalMinutes = settings.CheckIntervalMinutes,
+                        };
+                    }
+                }
                 if (settings.Enabled && IsNewer(settings.Version))
                 {
                     await StageAndStopAsync(settings, stoppingToken);
