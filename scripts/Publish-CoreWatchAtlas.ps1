@@ -25,7 +25,8 @@ foreach ($name in @('server', 'agent')) {
   $archive = Join-Path $outputRoot "corewatch-atlas-$name.zip"
   Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
   Compress-Archive -Path (Join-Path $source '*') -DestinationPath $archive -CompressionLevel Optimal
-  Get-FileHash -LiteralPath $archive -Algorithm SHA256 | Select-Object Algorithm, Hash, Path | Format-List | Out-File -LiteralPath "$archive.sha256.txt" -Encoding utf8
+  $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+  Set-Content -LiteralPath "$archive.sha256.txt" -Value "$hash  $(Split-Path -Leaf $archive)" -Encoding utf8
 }
 Write-Host "Published packages: $outputRoot"
 # CoreWatch Atlas operational script: Publish-CoreWatchAtlas.
