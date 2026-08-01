@@ -1,6 +1,6 @@
 # CoreWatch-Atlas 현재 상태
 
-마지막 갱신: 2026-08-01
+마지막 갱신: 2026-08-02
 새 채팅이나 작업자는 이 문서, `AGENTS.md`, `docs/NEXT_STEPS.md`와 관련 설계를 먼저 읽는다.
 
 ## 제품 경계
@@ -175,3 +175,9 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 ## 2026-08-01 GitHub update rate-limit fallback
 
 - When GitHub's unauthenticated releases API is rate-limited, the server resolves the latest release through GitHub's public `releases/latest/download` redirect and continues using the same SHA-256-verified package flow.
+
+## 2026-08-02 PDF report rebuild / PDF 보고서 재구축
+
+- v1.1.4 후보에서 기존 8줄 텍스트 PDF를 KPI 카드, 임계치 추세 차트, 경고·조치 이력, 파티션 용량 예측과 서버 상세를 포함한 다중 페이지 운영 보고서로 교체했다. / In the v1.1.4 candidate, replaced the eight-line text PDF with a multi-page operations report containing KPI cards, threshold trend charts, alert/action history, partition capacity forecasts, and server details.
+- 서버별 보고서와 Fleet 일일 보고서는 동일한 시각 체계를 사용하며 CSV는 UTF-8 BOM과 동등한 원시 데이터 섹션을 제공한다. / Per-server and fleet daily reports share one visual system, while CSV exports retain a UTF-8 BOM and equivalent raw-data sections.
+- Debug/Release 전체 테스트 85개, 패키지 취약점 감사, Poppler PNG 시각 검수, v1.1.4 ZIP·SHA-256 및 게시본 `/health/ready` 스모크 테스트를 통과했다. GitHub Release와 운영 배포는 코드 병합 후 진행한다. / All 85 Debug/Release tests, package vulnerability audit, Poppler PNG visual QA, v1.1.4 ZIP/SHA-256 checks, and the published-server `/health/ready` smoke test passed. GitHub Release and production deployment follow after merge.

@@ -807,7 +807,8 @@ app.MapGet("/api/v1/agents/{agentId:guid}/report", async (Guid agentId,int? days
     if (agent is null) return Results.NotFound();
     var snapshots = await s.GetSnapshotsAsync(agentId, from, to, 100000, ct);
     var alerts = (await s.ListAlertsAsync(false, 500, ct)).Where(x => x.AgentId == agentId && x.OpenedAtUtc <= to && (x.ResolvedAtUtc is null || x.ResolvedAtUtc >= from)).ToArray();
-    return Results.Ok(BuildServerReport(agentId, agent.HostName, from, to, snapshots, alerts));
+    var actions = await LoadAlertActionsAsync(s, alerts, ct);
+    return Results.Ok(BuildServerReport(agent, from, to, snapshots, alerts, actions));
 }).RequireAuthorization(OperatorPolicies.View);
 app.MapGet("/api/v1/agents/{agentId:guid}/capacity-forecast", async (Guid agentId,AtlasDatabase s,IOptions<ServerApiOptions> o,CancellationToken ct) =>
 {
@@ -817,8 +818,8 @@ app.MapGet("/api/v1/agents/{agentId:guid}/capacity-forecast", async (Guid agentI
     return Results.Ok(BuildCapacityForecast(agentId, agent.HostName, snapshots));
 }).RequireAuthorization(OperatorPolicies.View);
 app.MapGet("/api/v1/agents/{agentId:guid}/capacity-forecast/partitions",async(Guid agentId,AtlasDatabase s,IOptions<ServerApiOptions> o,CancellationToken ct)=>{var agent=await s.GetAgentAsync(agentId,TimeSpan.FromSeconds(o.Value.OfflineAfterSeconds),ct);if(agent is null)return Results.NotFound();var snapshots=await s.GetSnapshotsAsync(agentId,DateTimeOffset.UtcNow.AddDays(-30),DateTimeOffset.UtcNow,100000,ct);return Results.Ok(BuildPartitionForecasts(snapshots));}).RequireAuthorization(OperatorPolicies.View);
-app.MapGet("/api/v1/agents/{agentId:guid}/report/export",async(Guid agentId,int? days,string? format,AtlasDatabase s,IOptions<ServerApiOptions> o,CancellationToken ct)=>{var to=DateTimeOffset.UtcNow;var from=to.AddDays(-Math.Clamp(days??7,1,90));var agent=await s.GetAgentAsync(agentId,TimeSpan.FromSeconds(o.Value.OfflineAfterSeconds),ct);if(agent is null)return Results.NotFound();var snapshots=await s.GetSnapshotsAsync(agentId,from,to,100000,ct);var alerts=(await s.ListAlertsAsync(false,500,ct)).Where(x=>x.AgentId==agentId&&x.OpenedAtUtc<=to&&(x.ResolvedAtUtc is null||x.ResolvedAtUtc>=from)).ToArray();var report=BuildServerReport(agentId,agent.HostName,from,to,snapshots,alerts);return string.Equals(format,"pdf",StringComparison.OrdinalIgnoreCase)?Results.File(ReportExports.Pdf(report),"application/pdf",$"{agent.HostName}-report.pdf"):Results.File(ReportExports.Csv(report),"text/csv; charset=utf-8",$"{agent.HostName}-report.csv");}).RequireAuthorization(OperatorPolicies.View);
-app.MapGet("/api/v1/server-groups/{id:long}/report",async(long id,int? days,AtlasDatabase s,IOptions<ServerApiOptions> o,CancellationToken ct)=>{var to=DateTimeOffset.UtcNow;var from=to.AddDays(-Math.Clamp(days??7,1,90));var reports=new List<ServerReport>();foreach(var agentId in await s.ListGroupAgentIdsAsync(id,ct)){var agent=await s.GetAgentAsync(agentId,TimeSpan.FromSeconds(o.Value.OfflineAfterSeconds),ct);if(agent is null)continue;var snapshots=await s.GetSnapshotsAsync(agentId,from,to,100000,ct);var alerts=(await s.ListAlertsAsync(false,500,ct)).Where(x=>x.AgentId==agentId&&x.OpenedAtUtc<=to&&(x.ResolvedAtUtc is null||x.ResolvedAtUtc>=from)).ToArray();reports.Add(BuildServerReport(agentId,agent.HostName,from,to,snapshots,alerts));}return Results.Ok(reports);}).RequireAuthorization(OperatorPolicies.View);
+app.MapGet("/api/v1/agents/{agentId:guid}/report/export",async(Guid agentId,int? days,string? format,AtlasDatabase s,IOptions<ServerApiOptions> o,CancellationToken ct)=>{var to=DateTimeOffset.UtcNow;var from=to.AddDays(-Math.Clamp(days??7,1,90));var agent=await s.GetAgentAsync(agentId,TimeSpan.FromSeconds(o.Value.OfflineAfterSeconds),ct);if(agent is null)return Results.NotFound();var snapshots=await s.GetSnapshotsAsync(agentId,from,to,100000,ct);var alerts=(await s.ListAlertsAsync(false,500,ct)).Where(x=>x.AgentId==agentId&&x.OpenedAtUtc<=to&&(x.ResolvedAtUtc is null||x.ResolvedAtUtc>=from)).ToArray();var actions=await LoadAlertActionsAsync(s,alerts,ct);var report=BuildServerReport(agent,from,to,snapshots,alerts,actions);return string.Equals(format,"pdf",StringComparison.OrdinalIgnoreCase)?Results.File(ReportExports.Pdf(report),"application/pdf",$"{agent.HostName}-report.pdf"):Results.File(ReportExports.Csv(report),"text/csv; charset=utf-8",$"{agent.HostName}-report.csv");}).RequireAuthorization(OperatorPolicies.View);
+app.MapGet("/api/v1/server-groups/{id:long}/report",async(long id,int? days,AtlasDatabase s,IOptions<ServerApiOptions> o,CancellationToken ct)=>{var to=DateTimeOffset.UtcNow;var from=to.AddDays(-Math.Clamp(days??7,1,90));var reports=new List<ServerReport>();foreach(var agentId in await s.ListGroupAgentIdsAsync(id,ct)){var agent=await s.GetAgentAsync(agentId,TimeSpan.FromSeconds(o.Value.OfflineAfterSeconds),ct);if(agent is null)continue;var snapshots=await s.GetSnapshotsAsync(agentId,from,to,100000,ct);var alerts=(await s.ListAlertsAsync(false,500,ct)).Where(x=>x.AgentId==agentId&&x.OpenedAtUtc<=to&&(x.ResolvedAtUtc is null||x.ResolvedAtUtc>=from)).ToArray();var actions=await LoadAlertActionsAsync(s,alerts,ct);reports.Add(BuildServerReport(agent,from,to,snapshots,alerts,actions));}return Results.Ok(reports);}).RequireAuthorization(OperatorPolicies.View);
 app.MapGet("/api/v1/server-groups/{id:long}/dashboard",async(long id,AtlasDatabase s,IOptions<ServerApiOptions> o,CancellationToken ct)=>{var ids=await s.ListGroupAgentIdsAsync(id,ct);var agents=new List<AgentSummary>();foreach(var agentId in ids)if(await s.GetAgentAsync(agentId,TimeSpan.FromSeconds(o.Value.OfflineAfterSeconds),ct) is { } agent)agents.Add(agent);var active=(await s.ListAlertsAsync(true,500,ct)).Where(x=>ids.Contains(x.AgentId)).ToArray();return Results.Ok(new{serverCount=agents.Count,onlineCount=agents.Count(x=>x.Online),activeAlertCount=active.Length,servers=agents,alerts=active});}).RequireAuthorization(OperatorPolicies.View);
 app.MapGet("/api/v1/assets",async(AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListAssetInventoryAsync(ct))).RequireAuthorization(OperatorPolicies.View);
 app.MapGet("/api/v1/api-tokens",async(AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListApiTokensAsync(ct))).RequireAuthorization(OperatorPolicies.Admin);
@@ -1217,32 +1218,56 @@ static string ReadConfirmedPassword()
     }
 }
 
-static ServerReport BuildServerReport(Guid agentId, string hostName, DateTimeOffset from, DateTimeOffset to, IReadOnlyList<SnapshotRecord> snapshots, IReadOnlyList<AlertRecord> alerts)
+static async Task<IReadOnlyDictionary<long, IReadOnlyList<AlertAction>>> LoadAlertActionsAsync(AtlasDatabase database, IReadOnlyList<AlertRecord> alerts, CancellationToken cancellationToken)
 {
-    static double? Value(JsonElement x, string name)
+    var result = new Dictionary<long, IReadOnlyList<AlertAction>>();
+    foreach (var alert in alerts)
+        result[alert.Id] = await database.ListAlertActionsAsync(alert.Id, cancellationToken);
+    return result;
+}
+
+static ServerReport BuildServerReport(AgentSummary agent, DateTimeOffset from, DateTimeOffset to, IReadOnlyList<SnapshotRecord> snapshots, IReadOnlyList<AlertRecord> alerts, IReadOnlyDictionary<long, IReadOnlyList<AlertAction>>? alertActions = null)
+{
+    static (double? Cpu, double? Memory, double? Disk) Values(JsonElement x)
     {
         try
         {
-            return name switch
-            {
-                "cpu" => x.GetProperty("cpu").GetProperty("usageRatio").GetDouble() * 100,
-                "memory" => 100 * (1 - x.GetProperty("memory").GetProperty("availableBytes").GetDouble() / x.GetProperty("memory").GetProperty("totalBytes").GetDouble()),
-                "disk" => x.GetProperty("fileSystems").EnumerateArray().Select(f => (total:f.GetProperty("totalBytes").GetDouble(),free:f.GetProperty("availableBytes").GetDouble())).Aggregate((0d,0d),(a,b)=>(a.Item1+b.total,a.Item2+b.free)) is var d && d.Item1 > 0 ? 100 * (1 - d.Item2 / d.Item1) : null,
-                _ => null,
-            };
+            var memory = x.GetProperty("memory");
+            var fileSystems = x.GetProperty("fileSystems").EnumerateArray().Select(f => (Total: f.GetProperty("totalBytes").GetDouble(), Free: f.GetProperty("availableBytes").GetDouble())).Aggregate((0d, 0d), (a, b) => (a.Item1 + b.Total, a.Item2 + b.Free));
+            return (
+                x.GetProperty("cpu").GetProperty("usageRatio").GetDouble() * 100,
+                100 * (1 - memory.GetProperty("availableBytes").GetDouble() / memory.GetProperty("totalBytes").GetDouble()),
+                fileSystems.Item1 > 0 ? 100 * (1 - fileSystems.Item2 / fileSystems.Item1) : null);
         }
-        catch (KeyNotFoundException) { return null; }
-        catch (InvalidOperationException) { return null; }
+        catch (KeyNotFoundException) { return (null, null, null); }
+        catch (InvalidOperationException) { return (null, null, null); }
     }
-    static MetricReport Metric(IReadOnlyList<SnapshotRecord> x, string type)
+
+    static MetricReport Metric(IReadOnlyList<double?> source)
     {
-        var values = x.Select(s => Value(s.Metrics, type)).Where(v => v.HasValue).Select(v => v!.Value).ToArray();
-        return new MetricReport(values.Length == 0 ? null : values.Average(), values.Length == 0 ? null : values.Max(), values.Length == 0 ? null : values[0]);
+        var values = source.Where(v => v.HasValue).Select(v => v!.Value).ToArray();
+        return new MetricReport(values.Length == 0 ? null : values.Average(), values.Length == 0 ? null : values.Max(), source.LastOrDefault(x => x.HasValue));
     }
+
+    var ordered = snapshots.OrderBy(x => x.CapturedAtUtc).ToArray();
+    var trends = ordered.Select(x =>
+    {
+        var values = Values(x.Metrics);
+        return new ReportTrendPoint(x.CapturedAtUtc, values.Cpu, values.Memory, values.Disk);
+    }).ToArray();
+    var gapCount = ordered.Zip(ordered.Skip(1), (previous, current) => current.CapturedAtUtc - previous.CapturedAtUtc).Count(gap => gap > TimeSpan.FromSeconds(30));
     // 기본 수집 주기(15초)를 기준으로 수집 성공 비율을 가동률로 표시한다.
     // Agent가 다른 주기로 운영되더라도 100%를 넘지 않도록 상한을 둔다.
     var expected = Math.Max(1, (to - from).TotalSeconds / 15);
-    return new ServerReport(agentId, hostName, from, to, snapshots.Count, Math.Min(100, snapshots.Count / expected * 100), Metric(snapshots, "cpu"), Metric(snapshots, "memory"), Metric(snapshots, "disk"), alerts);
+    return new ServerReport(
+        agent.AgentId, agent.HostName, from, to, snapshots.Count,
+        Math.Min(100, snapshots.Count / expected * 100),
+        Metric(trends.Select(x => x.CpuPercent).ToArray()),
+        Metric(trends.Select(x => x.MemoryPercent).ToArray()),
+        Metric(trends.Select(x => x.DiskPercent).ToArray()), alerts,
+        agent.OperatingSystem, agent.AgentVersion,
+        ordered.LastOrDefault()?.CapturedAtUtc ?? agent.LastSeenAtUtc, gapCount,
+        trends, BuildPartitionForecasts(ordered), alertActions);
 }
 
 static CapacityForecast BuildCapacityForecast(Guid agentId, string hostName, IReadOnlyList<SnapshotRecord> snapshots)

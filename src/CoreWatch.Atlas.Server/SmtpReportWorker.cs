@@ -25,7 +25,7 @@ internal sealed class SmtpReportWorker(AtlasDatabase database, IOptions<SmtpRepo
         using var mail=new MailMessage(x.From,x.To,"CoreWatch Atlas daily report",$"Servers: {agents.Count}\nOnline: {online}\nOffline: {agents.Count-online}\nAlerts: {alerts.Count}");
         if(x.AttachCsv)mail.Attachments.Add(new Attachment(new MemoryStream(ReportExports.FleetCsv(agents,alerts)),"corewatch-atlas-daily.csv","text/csv"));
         if(x.AttachPdf)mail.Attachments.Add(new Attachment(new MemoryStream(ReportExports.FleetPdf(agents,alerts)),"corewatch-atlas-daily.pdf","application/pdf"));
-        using var client=new SmtpClient(x.Host,x.Port){EnableSsl=true,Credentials=string.IsNullOrWhiteSpace(x.Username)?CredentialCache.DefaultNetworkCredentials:new NetworkCredential(x.Username,x.Password)};
+        using var client=new SmtpClient(x.Host,x.Port){EnableSsl=x.EnableSsl,Credentials=string.IsNullOrWhiteSpace(x.Username)?CredentialCache.DefaultNetworkCredentials:new NetworkCredential(x.Username,x.Password)};
         await client.SendMailAsync(mail,token);
     }
 }

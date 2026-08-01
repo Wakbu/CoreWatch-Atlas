@@ -158,3 +158,9 @@ Windows API 기반 기본 지표와 Windows 실환경 검증을 구현했다.
 - Add an opt-in Server manifest (`Atlas:ServerUpdate`) with HTTPS, version and SHA-256 validation.
 - Stage the package before shutdown; the Linux systemd `ExecStopPost` helper applies it with backup and rollback.
 - Serve the self-signed enrollment CA as PEM so the generated Linux `curl --cacert` command works.
+
+## PDF report rebuild (implementation complete: 2026-08-02)
+
+- Replaced the minimal PDF with a shared server/fleet operations-report visual system.
+- Added equivalent sectioned CSV data, alert actions, capacity forecasts, trend data, server details, and focused export/attachment tests.
+- Local v1.1.4 package and published-server smoke validation passed; GitHub Release and production deployment remain after merge.

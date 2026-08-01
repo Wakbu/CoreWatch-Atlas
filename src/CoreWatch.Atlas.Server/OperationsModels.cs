@@ -9,8 +9,14 @@ public sealed record ServerGroupRequest(string Name, string? Description);
 public sealed record ServerReport(
     Guid AgentId, string HostName, DateTimeOffset FromUtc, DateTimeOffset ToUtc,
     int SnapshotCount, double AvailabilityPercent, MetricReport Cpu,
-    MetricReport Memory, MetricReport Disk, IReadOnlyList<AlertRecord> Alerts);
+    MetricReport Memory, MetricReport Disk, IReadOnlyList<AlertRecord> Alerts,
+    string OperatingSystem = "", string AgentVersion = "",
+    DateTimeOffset? LastCollectionUtc = null, int CollectionGapCount = 0,
+    IReadOnlyList<ReportTrendPoint>? TrendPoints = null,
+    IReadOnlyList<PartitionCapacityForecast>? Partitions = null,
+    IReadOnlyDictionary<long, IReadOnlyList<AlertAction>>? AlertActions = null);
 public sealed record MetricReport(double? Average, double? Maximum, double? Latest);
+public sealed record ReportTrendPoint(DateTimeOffset CapturedAtUtc, double? CpuPercent, double? MemoryPercent, double? DiskPercent);
 
 // 추세 계산은 관측치가 부족하거나 사용량이 감소하는 경우 예측을 만들지 않는다.
 // 근거 없는 날짜를 표시하는 것보다 "예측 불가"가 운영 판단에 안전하다.
