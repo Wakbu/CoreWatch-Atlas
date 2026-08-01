@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using CoreWatch.Atlas.Contracts;
 using CoreWatch.Atlas.Server;
 using Microsoft.AspNetCore.Antiforgery;
@@ -87,6 +88,7 @@ builder.Services
     .Validate(options => options.CacheMinutes is >= 5 and <= 1440,
         "GitHub release cache must be between 5 and 1440 minutes.")
     .ValidateOnStart();
+builder.Services.AddOptions<SmtpReportOptions>().Bind(builder.Configuration.GetSection(SmtpReportOptions.SectionName));
 builder.Services
     .AddOptions<ServerApiOptions>()
     .Bind(builder.Configuration.GetSection(ServerApiOptions.SectionName))
@@ -162,6 +164,7 @@ builder.Services.AddHostedService<SnapshotRetentionWorker>();
 builder.Services.AddHttpClient("atlas-alerts", client => client.Timeout = TimeSpan.FromSeconds(10));
 builder.Services.AddHostedService<AlertMaintenanceWorker>();
 builder.Services.AddHostedService<AlertNotificationWorker>();
+builder.Services.AddHostedService<SmtpReportWorker>();
 builder.Services.AddHttpClient("atlas-server-update", client => client.Timeout = TimeSpan.FromMinutes(10));
 builder.Services.AddHostedService<ServerUpdateWorker>();
 builder.Services.AddHttpClient("atlas-github-release", client =>
@@ -779,6 +782,30 @@ app.MapDelete(
     })
     .RequireAuthorization(OperatorPolicies.Admin);
 app.MapGet("/api/v1/alert-rules", async (AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListAlertRulesAsync(ct))).RequireAuthorization(OperatorPolicies.View);
+app.MapGet("/api/v1/server-groups", async (AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListServerGroupsAsync(ct))).RequireAuthorization(OperatorPolicies.View);
+app.MapGet("/api/v1/maintenance-windows",async(AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListMaintenanceWindowsAsync(ct))).RequireAuthorization(OperatorPolicies.View);
+app.MapPost("/api/v1/maintenance-windows",async([FromBody] MaintenanceWindowRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>!await ValidateAntiforgeryAsync(c,a)?Results.BadRequest():Results.Created("/api/v1/maintenance-windows",await s.CreateMaintenanceWindowAsync(x,ct))).RequireAuthorization(OperatorPolicies.Admin);
+app.MapGet("/api/v1/agents/{agentId:guid}/report", async (Guid agentId,int? days,AtlasDatabase s,IOptions<ServerApiOptions> o,CancellationToken ct) =>
+{
+    // 대용량 응답과 장기 보존 정책을 고려해 한 번의 보고서는 최대 90일로 제한한다.
+    var to = DateTimeOffset.UtcNow;
+    var from = to.AddDays(-Math.Clamp(days ?? 7, 1, 90));
+    var agent = await s.GetAgentAsync(agentId, TimeSpan.FromSeconds(o.Value.OfflineAfterSeconds), ct);
+    if (agent is null) return Results.NotFound();
+    var snapshots = await s.GetSnapshotsAsync(agentId, from, to, 100000, ct);
+    var alerts = (await s.ListAlertsAsync(false, 500, ct)).Where(x => x.AgentId == agentId && x.OpenedAtUtc <= to && (x.ResolvedAtUtc is null || x.ResolvedAtUtc >= from)).ToArray();
+    return Results.Ok(BuildServerReport(agentId, agent.HostName, from, to, snapshots, alerts));
+}).RequireAuthorization(OperatorPolicies.View);
+app.MapGet("/api/v1/agents/{agentId:guid}/capacity-forecast", async (Guid agentId,AtlasDatabase s,IOptions<ServerApiOptions> o,CancellationToken ct) =>
+{
+    var agent = await s.GetAgentAsync(agentId, TimeSpan.FromSeconds(o.Value.OfflineAfterSeconds), ct);
+    if (agent is null) return Results.NotFound();
+    var snapshots = await s.GetSnapshotsAsync(agentId, DateTimeOffset.UtcNow.AddDays(-30), DateTimeOffset.UtcNow, 100000, ct);
+    return Results.Ok(BuildCapacityForecast(agentId, agent.HostName, snapshots));
+}).RequireAuthorization(OperatorPolicies.View);
+app.MapPost("/api/v1/server-groups", async ([FromBody] ServerGroupRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>!await ValidateAntiforgeryAsync(c,a)?Results.BadRequest():Results.Created("/api/v1/server-groups",await s.CreateServerGroupAsync(x,ct))).RequireAuthorization(OperatorPolicies.Admin);
+app.MapDelete("/api/v1/server-groups/{id:long}", async(long id,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>!await ValidateAntiforgeryAsync(c,a)?Results.BadRequest():await s.DeleteServerGroupAsync(id,ct)?Results.NoContent():Results.NotFound()).RequireAuthorization(OperatorPolicies.Admin);
+app.MapPut("/api/v1/server-groups/{id:long}/agents/{agentId:guid}", async(long id,Guid agentId,bool member,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>!await ValidateAntiforgeryAsync(c,a)?Results.BadRequest():await s.SetAgentGroupAsync(agentId,id,member,ct)?Results.NoContent():Results.NotFound()).RequireAuthorization(OperatorPolicies.Admin);
 app.MapGet("/api/v1/releases/latest", async (GitHubReleaseCatalog releases, CancellationToken ct) =>
 {
     var release = await releases.GetLatestAsync(ct);
@@ -885,6 +912,17 @@ static string BuildWindowsInstallerScript(string serverUrl, string packageUrl) =
     if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Run this command in an elevated PowerShell session.' }
     $root = Join-Path $env:ProgramFiles 'CoreWatch-Atlas\\Agent'
     $zip = Join-Path $env:TEMP 'corewatch-atlas-agent.zip'
+    $service = 'CoreWatchAtlasAgent'
+    # 기존 서비스가 DLL을 붙잡은 상태에서 압축을 풀면 Access denied가 발생한다.
+    # 서비스 삭제 전에 PID를 보관하고, 프로세스가 실제로 끝날 때까지 기다린 뒤 설치 폴더를 교체한다.
+    $existing = Get-CimInstance Win32_Service -Filter "Name='$service'" -ErrorAction SilentlyContinue
+    if ($existing) {
+      Stop-Service -Name $service -Force -ErrorAction SilentlyContinue
+      if ($existing.ProcessId -gt 0) { Wait-Process -Id $existing.ProcessId -Timeout 20 -ErrorAction SilentlyContinue }
+      sc.exe delete $service | Out-Null
+      Start-Sleep -Seconds 1
+    }
+    Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $root | Out-Null
     Invoke-WebRequest -UseBasicParsing -Uri '__PACKAGE_URL__' -OutFile $zip
     Expand-Archive -LiteralPath $zip -DestinationPath $root -Force
@@ -892,8 +930,6 @@ static string BuildWindowsInstallerScript(string serverUrl, string packageUrl) =
     if (-not $dotnet) { throw '.NET 10 runtime is required. Install it, then rerun this command.' }
     Remove-Item -LiteralPath (Join-Path $root 'data\agent-credentials') -Recurse -Force -ErrorAction SilentlyContinue
     & $dotnet (Join-Path $root 'CoreWatch.Atlas.Agent.dll') --register-agent '__SERVER_URL__'
-    $service = 'CoreWatchAtlasAgent'
-    if (Get-Service -Name $service -ErrorAction SilentlyContinue) { Stop-Service $service -Force; sc.exe delete $service | Out-Null; Start-Sleep -Seconds 1 }
     $binary = ('"{0}" "{1}"' -f $dotnet, (Join-Path $root 'CoreWatch.Atlas.Agent.dll'))
     New-Service -Name $service -BinaryPathName $binary -DisplayName 'CoreWatch Atlas Agent' -StartupType Automatic | Out-Null
     Start-Service $service
@@ -1135,6 +1171,52 @@ static string ReadConfirmedPassword()
 
         return password;
     }
+}
+
+static ServerReport BuildServerReport(Guid agentId, string hostName, DateTimeOffset from, DateTimeOffset to, IReadOnlyList<SnapshotRecord> snapshots, IReadOnlyList<AlertRecord> alerts)
+{
+    static double? Value(JsonElement x, string name)
+    {
+        try
+        {
+            return name switch
+            {
+                "cpu" => x.GetProperty("cpu").GetProperty("usageRatio").GetDouble() * 100,
+                "memory" => 100 * (1 - x.GetProperty("memory").GetProperty("availableBytes").GetDouble() / x.GetProperty("memory").GetProperty("totalBytes").GetDouble()),
+                "disk" => x.GetProperty("fileSystems").EnumerateArray().Select(f => (total:f.GetProperty("totalBytes").GetDouble(),free:f.GetProperty("availableBytes").GetDouble())).Aggregate((0d,0d),(a,b)=>(a.Item1+b.total,a.Item2+b.free)) is var d && d.Item1 > 0 ? 100 * (1 - d.Item2 / d.Item1) : null,
+                _ => null,
+            };
+        }
+        catch (KeyNotFoundException) { return null; }
+        catch (InvalidOperationException) { return null; }
+    }
+    static MetricReport Metric(IReadOnlyList<SnapshotRecord> x, string type)
+    {
+        var values = x.Select(s => Value(s.Metrics, type)).Where(v => v.HasValue).Select(v => v!.Value).ToArray();
+        return new MetricReport(values.Length == 0 ? null : values.Average(), values.Length == 0 ? null : values.Max(), values.Length == 0 ? null : values[0]);
+    }
+    // 기본 수집 주기(15초)를 기준으로 수집 성공 비율을 가동률로 표시한다.
+    // Agent가 다른 주기로 운영되더라도 100%를 넘지 않도록 상한을 둔다.
+    var expected = Math.Max(1, (to - from).TotalSeconds / 15);
+    return new ServerReport(agentId, hostName, from, to, snapshots.Count, Math.Min(100, snapshots.Count / expected * 100), Metric(snapshots, "cpu"), Metric(snapshots, "memory"), Metric(snapshots, "disk"), alerts);
+}
+
+static CapacityForecast BuildCapacityForecast(Guid agentId, string hostName, IReadOnlyList<SnapshotRecord> snapshots)
+{
+    // 파일 시스템을 합산해 서버 전체의 사용률로 환산한다. 마운트별 예측은 별도 정책이 필요하므로
+    // 여기서는 운영자가 빠르게 증설 대상을 찾을 수 있는 단일 지표만 제공한다.
+    static double? Disk(JsonElement x)
+    {
+        try { var v=x.GetProperty("fileSystems").EnumerateArray().Select(f=>(f.GetProperty("totalBytes").GetDouble(),f.GetProperty("availableBytes").GetDouble())).Aggregate((0d,0d),(a,b)=>(a.Item1+b.Item1,a.Item2+b.Item2)); return v.Item1>0?100*(1-v.Item2/v.Item1):null; }
+        catch (InvalidOperationException) { return null; }
+        catch (KeyNotFoundException) { return null; }
+    }
+    // 첫 관측치와 마지막 관측치의 차이를 일 단위 증가율로 사용한다. 일시적인 감소나
+    // 관측 부족 상태에서는 임의의 부족 날짜를 만들지 않고 null을 반환한다.
+    var points=snapshots.OrderBy(x=>x.CapturedAtUtc).Select(x=>(x.CapturedAtUtc,Disk(x.Metrics))).Where(x=>x.Item2.HasValue).ToArray();
+    if(points.Length<2)return new(agentId,hostName,points.LastOrDefault().Item2,null,null);
+    var first=points[0];var last=points[^1];var days=(last.CapturedAtUtc-first.CapturedAtUtc).TotalDays;var growth=days>0?(last.Item2!.Value-first.Item2!.Value)/days:0;
+    return new(agentId,hostName,last.Item2,growth>0?growth:null,growth>0?(100-last.Item2!.Value)/growth:null);
 }
 
 public partial class Program;

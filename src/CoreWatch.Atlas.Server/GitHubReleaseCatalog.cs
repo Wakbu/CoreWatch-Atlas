@@ -18,6 +18,8 @@ internal sealed class GitHubReleaseCatalog(
     {
         var settings = options.CurrentValue;
         if (!settings.Enabled || !IsRepository(settings.Repository)) return null;
+        // GitHub API 호출은 설치된 Agent 수와 무관하게 Server 한 곳에서만 수행한다.
+        // 캐시로 API 제한과 일시적인 외부망 오류의 영향을 줄인다.
         if (cached is not null && timeProvider.GetUtcNow() < expiresAtUtc) return cached;
         await gate.WaitAsync(cancellationToken);
         try
@@ -67,6 +69,8 @@ internal sealed class GitHubReleaseCatalog(
     {
         using var response = await clients.CreateClient("atlas-github-release").GetAsync(url, token);
         if (!response.IsSuccessStatusCode) return null;
+        // Publish 스크립트가 만드는 해시 파일은 "SHA256 경로" 형식이다.
+        // 첫 토큰만 받아 64자리 16진수인지 검증한 뒤에만 업데이트 매니페스트에 사용한다.
         var hash = (await response.Content.ReadAsStringAsync(token)).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         return hash is { Length: 64 } && hash.All(Uri.IsHexDigit) ? hash.ToUpperInvariant() : null;
     }

@@ -135,6 +135,11 @@ Atlas Web은 기존 CoreWatch 개인 사용자판의 정보 구성, 색상 감�
 - 등록 명령은 Windows와 Linux에서 Atlas CA를 먼저 신뢰하고 필요한 런타임·압축 해제 도구를 설치한다. / Enrollment commands trust the Atlas CA first and install required runtime and archive tools on Windows and Linux.
 - 대시보드와 서버 목록은 한 줄에 최대 네 개 카드만 표시하며 Atlas 아이콘을 사용한다. / Dashboard and server pages show at most four cards per row and use the Atlas icon.
 
+## 2026-08-01 Operations reporting / 운영 보고서
+
+- 서버별 7일 보고서와 디스크 사용량 증가 추세 기반 용량 예측 API를 추가했다. / Added per-server seven-day reports and disk-growth capacity forecast API.
+- 서버 그룹, 유지보수 창, SMTP 일일 요약 전송 기반을 추가했다. 유지보수 중에도 경고 이력은 보존하고 외부 알림만 억제한다. / Added server groups, maintenance windows, and SMTP daily summary foundation. Alerts remain recorded while external delivery is suppressed during maintenance.
+
 ## 2026-07-30 Agent automatic update
 
 - Current branch: `main`. Latest pushed UI commits: `1154b65`, `4f477d3`, `1d14a12`.

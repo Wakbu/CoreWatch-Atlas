@@ -116,10 +116,10 @@ public sealed class ServerApiTests
         var status = await client.GetFromJsonAsync<JsonElement>("/api/v1/status");
 
         Assert.AreEqual("ready", ready.GetProperty("status").GetString());
-        Assert.AreEqual(7, ready.GetProperty("schemaVersion").GetInt32());
+        Assert.AreEqual(AtlasDatabase.CurrentSchemaVersion, ready.GetProperty("schemaVersion").GetInt32());
         Assert.AreEqual("CoreWatch-Atlas.Server", status.GetProperty("service").GetString());
         Assert.AreEqual(
-            7,
+            AtlasDatabase.CurrentSchemaVersion,
             status.GetProperty("storage").GetProperty("schemaVersion").GetInt32());
     }
 
@@ -163,7 +163,7 @@ public sealed class ServerApiTests
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM schema_migrations;";
 
-        Assert.AreEqual(7L, (long)(await command.ExecuteScalarAsync())!);
+        Assert.AreEqual((long)AtlasDatabase.CurrentSchemaVersion, (long)(await command.ExecuteScalarAsync())!);
     }
 
     [TestMethod]

@@ -9,7 +9,7 @@ namespace CoreWatch.Atlas.Server;
 
 public sealed partial class AtlasDatabase
 {
-    public const int CurrentSchemaVersion = 7;
+    public const int CurrentSchemaVersion = 9;
 
     private readonly string _connectionString;
     private readonly TimeProvider _timeProvider;
@@ -128,6 +128,24 @@ public sealed partial class AtlasDatabase
 
                 INSERT OR IGNORE INTO schema_migrations (version, applied_at_utc)
                     VALUES (2, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                """,
+                cancellationToken,
+                transaction);
+
+            await ExecuteNonQueryAsync(connection, """
+                -- 유지보수 창은 알림 발송 여부만 제어한다. 수집 데이터와 경고 이력은 계속 보존한다.
+                CREATE TABLE IF NOT EXISTS maintenance_windows (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,starts_at_utc TEXT NOT NULL,ends_at_utc TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS ix_maintenance_windows_time ON maintenance_windows(starts_at_utc,ends_at_utc);
+                INSERT OR IGNORE INTO schema_migrations(version,applied_at_utc) VALUES(9,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+                """, cancellationToken, transaction);
+
+            await ExecuteNonQueryAsync(
+                connection,
+                """
+                CREATE TABLE IF NOT EXISTS server_groups (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL COLLATE NOCASE UNIQUE,description TEXT NULL);
+                CREATE TABLE IF NOT EXISTS server_group_members (group_id INTEGER NOT NULL,agent_id TEXT NOT NULL,PRIMARY KEY(group_id,agent_id),FOREIGN KEY(group_id) REFERENCES server_groups(id) ON DELETE CASCADE,FOREIGN KEY(agent_id) REFERENCES agents(agent_id) ON DELETE CASCADE);
+                CREATE INDEX IF NOT EXISTS ix_server_group_members_agent ON server_group_members(agent_id);
+                INSERT OR IGNORE INTO schema_migrations(version,applied_at_utc) VALUES(8,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
                 """,
                 cancellationToken,
                 transaction);
