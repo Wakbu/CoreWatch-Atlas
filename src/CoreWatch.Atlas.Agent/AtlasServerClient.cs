@@ -126,6 +126,12 @@ public sealed class AtlasServerClient
             $"api/v1/agents/{agentId:D}/updates/{deploymentId}/status");
         request.Content = JsonContent.Create(new AgentUpdateStatusRequest(state, detail));
         using var response = await httpClient.SendAsync(request, cancellationToken);
+        // A restarted Server can have already reconciled this deployment from the Agent version snapshot.
+        // Status telemetry must not prevent a verified package from being applied in that case.
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return;
+        }
         response.EnsureSuccessStatusCode();
     }
 

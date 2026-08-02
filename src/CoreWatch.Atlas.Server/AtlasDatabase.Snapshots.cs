@@ -72,6 +72,20 @@ public sealed partial class AtlasDatabase
             throw new InvalidOperationException("Registered agent no longer exists.");
         }
 
+        await using var reconcile = connection.CreateCommand();
+        reconcile.Transaction = transaction;
+        reconcile.CommandText = """
+            UPDATE agent_update_deployments
+            SET state = 'succeeded', detail = NULL, updated_at_utc = $now
+            WHERE agent_id = $agentId
+              AND state IN ('pending','downloading','staged','applying')
+              AND version = $version;
+            """;
+        reconcile.Parameters.AddWithValue("$agentId", agentId.ToString("D"));
+        reconcile.Parameters.AddWithValue("$version", snapshot.Agent.AgentVersion.Split('+', 2)[0]);
+        reconcile.Parameters.AddWithValue("$now", FormatTimestamp(receivedAt));
+        await reconcile.ExecuteNonQueryAsync(cancellationToken);
+
         await transaction.CommitAsync(cancellationToken);
         return new SnapshotRecord(
             snapshotId,
