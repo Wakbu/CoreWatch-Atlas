@@ -3,6 +3,20 @@ param(
   [string]$Configuration = 'Release'
 )
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+Add-Type -AssemblyName System.IO.Compression
+function New-PortableZip([string]$Source, [string]$Archive) {
+  $stream = [IO.File]::Open($Archive, [IO.FileMode]::Create)
+  try {
+    $zip = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+      Get-ChildItem -LiteralPath $Source -Recurse -File | ForEach-Object {
+        $entryName = $_.FullName.Substring($Source.Length).TrimStart('\', '/') -replace '\\', '/'
+        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+      }
+    } finally { $zip.Dispose() }
+  } finally { $stream.Dispose() }
+}
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $outputRoot = [IO.Path]::GetFullPath($OutputDirectory)
 $stagingRoot = Join-Path $outputRoot 'staging'
@@ -16,7 +30,7 @@ dotnet publish (Join-Path $repositoryRoot 'src/CoreWatch.Atlas.Agent/CoreWatch.A
 if ($LASTEXITCODE -ne 0) { throw 'Agent publish failed.' }
 $agentArchive = Join-Path $outputRoot 'corewatch-atlas-agent.zip'
 Remove-Item -LiteralPath $agentArchive -Force -ErrorAction SilentlyContinue
-Compress-Archive -Path (Join-Path $agentOutput '*') -DestinationPath $agentArchive -CompressionLevel Optimal
+New-PortableZip $agentOutput $agentArchive
 $downloadDirectory = Join-Path $serverOutput 'wwwroot/downloads'
 New-Item -ItemType Directory -Force -Path $downloadDirectory | Out-Null
 Copy-Item -LiteralPath $agentArchive -Destination (Join-Path $downloadDirectory 'corewatch-atlas-agent.zip') -Force
@@ -24,7 +38,7 @@ foreach ($name in @('server', 'agent')) {
   $source = Join-Path $stagingRoot $name
   $archive = Join-Path $outputRoot "corewatch-atlas-$name.zip"
   Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
-  Compress-Archive -Path (Join-Path $source '*') -DestinationPath $archive -CompressionLevel Optimal
+  New-PortableZip $source $archive
   $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
   Set-Content -LiteralPath "$archive.sha256.txt" -Value "$hash  $(Split-Path -Leaf $archive)" -Encoding utf8
 }
