@@ -811,6 +811,7 @@ app.MapDelete(
     .RequireAuthorization(OperatorPolicies.Admin);
 app.MapGet("/api/v1/alert-rules", async (AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListAlertRulesAsync(ct))).RequireAuthorization(OperatorPolicies.View);
 app.MapGet("/api/v1/server-groups", async (AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListServerGroupsAsync(ct))).RequireAuthorization(OperatorPolicies.View);
+app.MapGet("/api/v1/server-groups/{id:long}/members", async(long id,AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListGroupAgentIdsAsync(id,ct))).RequireAuthorization(OperatorPolicies.View);
 app.MapGet("/api/v1/agents/{agentId:guid}/asset",async(Guid agentId,AtlasDatabase s,CancellationToken ct)=>{var x=await s.GetAssetMetadataAsync(agentId,ct);return x is null?Results.Ok(new AssetMetadata(agentId,null,null,null,null,[])):Results.Ok(x);}).RequireAuthorization(OperatorPolicies.View);
 app.MapPut("/api/v1/agents/{agentId:guid}/asset",async(Guid agentId,[FromBody] AssetMetadataRequest x,HttpContext c,IAntiforgery a,AtlasDatabase s,CancellationToken ct)=>{if(!await ValidateAntiforgeryAsync(c,a))return Results.BadRequest();await s.SetAssetMetadataAsync(agentId,x,ct);return Results.NoContent();}).RequireAuthorization(OperatorPolicies.Admin);
 app.MapGet("/api/v1/asset-tags",async(AtlasDatabase s,CancellationToken ct)=>Results.Ok(await s.ListAssetTagsAsync(ct))).RequireAuthorization(OperatorPolicies.View);

@@ -25,19 +25,23 @@ internal sealed class GitHubReleaseCatalog(
         try
         {
             if (cached is not null && timeProvider.GetUtcNow() < expiresAtUtc) return cached;
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"repos/{settings.Repository}/releases/latest");
-            request.Headers.UserAgent.Add(new ProductInfoHeaderValue("CoreWatch-Atlas", "1.0"));
-            using var response = await clients.CreateClient("atlas-github-release").SendAsync(request, cancellationToken);
-            GitHubReleaseCandidate? candidate;
-            if (!response.IsSuccessStatusCode)
+            // Public release redirects are not subject to the shared GitHub REST API rate limit.
+            // Use them first so every deployed server can discover updates without a stored token.
+            var candidate = await TryGetLatestDownloadCandidateAsync(settings.Repository, cancellationToken);
+            if (candidate is null)
             {
-                logger.LogWarning("GitHub release API lookup returned HTTP {StatusCode}; trying the latest-download redirect.", (int)response.StatusCode);
-                candidate = await TryGetLatestDownloadCandidateAsync(settings.Repository, cancellationToken);
-            }
-            else
-            {
-                using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(cancellationToken));
-                candidate = TryParse(document.RootElement);
+                using var request = new HttpRequestMessage(HttpMethod.Get, $"repos/{settings.Repository}/releases/latest");
+                request.Headers.UserAgent.Add(new ProductInfoHeaderValue("CoreWatch-Atlas", "1.0"));
+                using var response = await clients.CreateClient("atlas-github-release").SendAsync(request, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    logger.LogWarning("GitHub release lookup failed: redirect was unavailable and API returned HTTP {StatusCode}.", (int)response.StatusCode);
+                }
+                else
+                {
+                    using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(cancellationToken));
+                    candidate = TryParse(document.RootElement);
+                }
             }
             cached = candidate is null ? null : await ResolveHashesAsync(candidate, cancellationToken);
             expiresAtUtc = timeProvider.GetUtcNow().AddMinutes(Math.Clamp(settings.CacheMinutes, 5, 1440));
