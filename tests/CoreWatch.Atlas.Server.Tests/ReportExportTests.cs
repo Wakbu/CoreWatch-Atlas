@@ -21,7 +21,8 @@ public sealed class ReportExportTests
         StringAssert.Contains(text, "RESOURCE TRENDS");
         StringAssert.Contains(text, "SERVER DETAILS & CAPACITY");
         StringAssert.Contains(text, "ALERTS & ACTION HISTORY");
-        StringAssert.Contains(text, "CoreWatch 1.1.11");
+        var version = typeof(ReportExports).Assembly.GetName().Version?.ToString(3);
+        StringAssert.Contains(text, $"CoreWatch {version}");
         StringAssert.EndsWith(text, "%%EOF");
     }
 
