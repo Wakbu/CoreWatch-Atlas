@@ -1047,6 +1047,7 @@ static string BuildLinuxInstallerScript(string serverUrl, string packageUrl) =>
     Wants=network-online.target
     [Service]
     Type=simple
+    WorkingDirectory=/opt/corewatch-atlas-agent
     Environment=Atlas__CredentialStore__Path=/var/lib/corewatch-atlas-agent
     Environment=Atlas__AutomaticUpdate__StatePath=/var/lib/corewatch-atlas-agent/updates
     ExecStart=/usr/bin/env dotnet /opt/corewatch-atlas-agent/CoreWatch.Atlas.Agent.dll
