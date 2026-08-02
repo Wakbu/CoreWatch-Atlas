@@ -15,3 +15,10 @@
 - 새 사용자 화면의 워크플로 라벨은 `한국어 / English` 형식으로 병기합니다.
 - Forms must use explicit labels and responsive layout; checkboxes must never inherit the normal text-input width.
 - 폼에는 명시적 레이블과 반응형 레이아웃을 사용하며, 체크박스가 일반 텍스트 입력 폭을 상속받지 않도록 합니다.
+
+## Background refresh isolation / 백그라운드 갱신 격리
+
+- Graph refreshes must update only the active dashboard/chart DOM region. They must not rerender another page, recreate forms, or reset the user's current selection, input, scroll position, or expanded action panel.
+- 그래프 갱신은 현재 Dashboard·차트 영역만 갱신해야 합니다. 다른 페이지를 다시 렌더링하거나 폼을 재생성하여 사용자가 선택한 항목, 입력값, 스크롤 위치, 펼쳐 둔 조치 패널을 초기화해서는 안 됩니다.
+- Before adding polling or a timer, identify the smallest DOM region that can change. Preserve interaction state unless the user explicitly navigates away or submits a successful action.
+- 폴링이나 타이머를 추가하기 전에 변경 가능한 최소 DOM 영역을 식별합니다. 사용자가 직접 페이지를 이동하거나 작업을 성공적으로 제출한 경우 외에는 상호작용 상태를 유지합니다.
