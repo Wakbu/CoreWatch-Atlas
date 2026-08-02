@@ -211,6 +211,26 @@ app.MapGet(
     () => Results.Ok(new { status = "ok" }));
 
 app.MapGet(
+    "/health/certificate",
+    (IConfiguration configuration, TimeProvider timeProvider) =>
+    {
+        var certificatePath = configuration["Kestrel:Certificates:Default:Path"]
+            ?? configuration["ASPNETCORE_Kestrel__Certificates__Default__Path"];
+        var certificatePassword = configuration["Kestrel:Certificates:Default:Password"]
+            ?? configuration["ASPNETCORE_Kestrel__Certificates__Default__Password"];
+        if (string.IsNullOrWhiteSpace(certificatePath) || !File.Exists(certificatePath))
+        {
+            return Results.Json(new { status = "not-ready", reason = "certificate-unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+        using var certificate = X509CertificateLoader.LoadPkcs12FromFile(certificatePath, certificatePassword, X509KeyStorageFlags.EphemeralKeySet);
+        var expiresAtUtc = new DateTimeOffset(certificate.NotAfter.ToUniversalTime());
+        var remainingDays = Math.Floor((expiresAtUtc - timeProvider.GetUtcNow()).TotalDays);
+        return expiresAtUtc > timeProvider.GetUtcNow()
+            ? Results.Ok(new { status = remainingDays < 30 ? "expiring" : "valid", expiresAtUtc, remainingDays })
+            : Results.Json(new { status = "expired", expiresAtUtc, remainingDays }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    });
+
+app.MapGet(
     "/api/v1/auth/csrf",
     (HttpContext context, IAntiforgery antiforgery) =>
     {
