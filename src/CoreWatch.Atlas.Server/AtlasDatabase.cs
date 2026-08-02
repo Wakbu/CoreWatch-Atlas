@@ -9,7 +9,7 @@ namespace CoreWatch.Atlas.Server;
 
 public sealed partial class AtlasDatabase
 {
-    public const int CurrentSchemaVersion = 11;
+    public const int CurrentSchemaVersion = 12;
 
     private readonly string _connectionString;
     private readonly TimeProvider _timeProvider;
@@ -299,6 +299,8 @@ public sealed partial class AtlasDatabase
             await EnsureColumnAsync(connection, transaction, "assignee", "TEXT NULL", cancellationToken, "alert_rules");
             await EnsureColumnAsync(connection, transaction, "target_agent_id", "TEXT NULL", cancellationToken, "alert_rules");
             await EnsureColumnAsync(connection, transaction, "target_group_id", "INTEGER NULL", cancellationToken, "alert_rules");
+            await EnsureColumnAsync(connection, transaction, "diagnostic_id", "TEXT NULL", cancellationToken, "alert_rules");
+            await ExecuteNonQueryAsync(connection, "INSERT OR IGNORE INTO schema_migrations(version,applied_at_utc) VALUES(12,strftime('%Y-%m-%dT%H:%M:%fZ','now'));", cancellationToken, transaction);
             await EnsureColumnAsync(connection, transaction, "assigned_to", "TEXT NULL", cancellationToken, "alerts");
             await EnsureColumnAsync(connection, transaction, "last_notified_at_utc", "TEXT NULL", cancellationToken, "alerts");
             await EnsureColumnAsync(connection, transaction, "channel_type", "TEXT NOT NULL DEFAULT 'generic'", cancellationToken, "notification_channels");
