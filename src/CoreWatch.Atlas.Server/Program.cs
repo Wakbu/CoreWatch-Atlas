@@ -1059,7 +1059,8 @@ static string BuildLinuxInstallerScript(string serverUrl, string packageUrl) =>
     WantedBy=multi-user.target
     UNIT
     systemctl daemon-reload
-    systemctl enable --now corewatch-atlas-agent
+    systemctl enable corewatch-atlas-agent
+    systemctl restart corewatch-atlas-agent
     echo 'CoreWatch Atlas Agent installation completed.'
     """
     .Replace("__SERVER_URL__", serverUrl, StringComparison.Ordinal)
