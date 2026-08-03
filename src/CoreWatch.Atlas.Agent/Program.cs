@@ -69,15 +69,19 @@ static async Task RegisterAgentAsync(string baseUrl, AgentCredentialStore creden
         null);
     var existing = credentialStore.Load();
     using var client = CreateAdministrationClient(serverUri!);
-    using var response = await client.PostAsJsonAsync(
+    Task<HttpResponseMessage> RegisterAsync(Guid? existingAgentId) => client.PostAsJsonAsync(
         "api/v1/agents/register",
-        new AgentRegistrationRequest(
-            token,
-            Environment.MachineName,
-            RuntimeInformation.OSDescription,
+        new AgentRegistrationRequest(token, Environment.MachineName, RuntimeInformation.OSDescription,
             RuntimeInformation.OSArchitecture.ToString(),
-            typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
-            existing?.AgentId));
+            typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown", existingAgentId));
+    var response = await RegisterAsync(existing?.AgentId);
+    if (response.StatusCode == HttpStatusCode.Unauthorized && existing is not null)
+    {
+        response.Dispose();
+        response = await RegisterAsync(existingAgentId: null);
+    }
+    using (response)
+    {
     if (response.StatusCode == HttpStatusCode.Unauthorized)
     {
         throw new InvalidOperationException(
@@ -88,6 +92,7 @@ static async Task RegisterAgentAsync(string baseUrl, AgentCredentialStore creden
         ?? throw new InvalidOperationException("The Atlas Server returned an empty registration response.");
     credentialStore.Save(new StoredAgentCredentials(serverUri!.ToString(), registered.AgentId, registered.Credential));
     Console.WriteLine($"Registered Agent '{registered.AgentId:D}' and stored its credential.");
+    }
 }
 
 static async Task RotateCredentialAsync(AgentCredentialStore credentialStore)
