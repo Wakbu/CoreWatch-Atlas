@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
@@ -77,6 +78,11 @@ static async Task RegisterAgentAsync(string baseUrl, AgentCredentialStore creden
             RuntimeInformation.OSArchitecture.ToString(),
             typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
             existing?.AgentId));
+    if (response.StatusCode == HttpStatusCode.Unauthorized)
+    {
+        throw new InvalidOperationException(
+            "Registration token was expired or already consumed. Generate a new one-time install command and run it again.");
+    }
     response.EnsureSuccessStatusCode();
     var registered = await response.Content.ReadFromJsonAsync<RegisteredAgent>()
         ?? throw new InvalidOperationException("The Atlas Server returned an empty registration response.");
