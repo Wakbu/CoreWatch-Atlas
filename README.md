@@ -2,7 +2,15 @@
 
 CoreWatch-Atlas는 Windows와 Linux 장비의 상태를 한곳에서 확인하기 위한 크로스플랫폼 시스템 모니터링 플랫폼입니다.
 
-> 현재 Agent 수집·중앙 전송, Server/API와 Web 대시보드 MVP까지 구현됐으며 정식 배포 패키지는 아직 없습니다.
+> 여러 서버의 상태를 Web 대시보드에서 확인하고, 경고·그룹·자산·점검 이력을 운영할 수 있는 Agent 기반 관제 도구입니다.
+
+## 설치와 배포
+
+- **Server 설치**: `corewatch-atlas-server.zip`을 배포 서버에 설치하고 HTTPS 주소로 Web 대시보드에 접속합니다.
+- **Agent 등록**: 대시보드의 `Agent 등록`에서 대상 OS를 선택하고 1회용 설치 명령을 생성합니다. 해당 명령을 대상 Windows 또는 Linux 서버에서 관리자 권한으로 실행합니다.
+- **상태 확인**: 등록된 서버는 대시보드와 서버 목록에서 CPU·메모리·디스크·네트워크·마지막 수집 시각을 확인할 수 있습니다.
+- **운영 관리**: 서버 그룹, 자산 정보, 경고 규칙, 유지보수 시간, 진단 설정과 PDF/CSV 보고서를 Web에서 관리합니다.
+- 배포 ZIP과 SHA-256 파일은 [GitHub Releases](https://github.com/Wakbu/CoreWatch-Atlas/releases)에서 제공하며, 상세 절차는 [운영 배포 문서](docs/SECURITY_DEPLOYMENT.md)를 참고하세요.
 
 ## 현재 기능
 
@@ -72,8 +80,8 @@ Prometheus  ─ 선택적 연동 ────────────┘
 4. 웹 대시보드 MVP: 완료
 5. 운영자 인증·조회 권한: 완료
 6. HTTPS와 비밀정보 관리: 완료
-7. 경고, 서비스 설치와 Docker 배포
-8. `1.0.0` 안정화
+7. 경고, 서비스 설치와 Docker 배포: 완료
+8. 운영 배포 패키지 제공: 완료
 
 
 ## 개발 빌드
@@ -86,6 +94,6 @@ dotnet test CoreWatch.Atlas.sln -c Release --no-build
 dotnet list CoreWatch.Atlas.sln package --vulnerable --include-transitive
 ```
 
-## 버전과 라이선스
+## 배포와 라이선스
 
-Atlas는 기존 CoreWatch와 독립된 `0.x` 버전으로 시작하며 정식 운영 요구사항을 충족한 뒤 `1.0.0`을 배포합니다. 라이선스는 [Apache License 2.0](LICENSE)입니다.
+Atlas는 기존 CoreWatch와 독립적으로 관리됩니다. 최신 설치 패키지와 변경 사항은 [GitHub Releases](https://github.com/Wakbu/CoreWatch-Atlas/releases)에서 확인할 수 있습니다. 라이선스는 [Apache License 2.0](LICENSE)입니다.
