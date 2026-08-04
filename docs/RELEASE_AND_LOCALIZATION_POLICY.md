@@ -2,6 +2,13 @@
 
 ## Required release notes / 필수 릴리스 노트
 
+## Release tag ordering / 릴리스 태그 정렬
+
+- Create and push an annotated `v<version>` tag at the exact release commit before creating the GitHub Release. Never let `gh release create` implicitly target the default branch.
+- Recreate affected releases in ascending version order when correcting release metadata so GitHub's creation-time list remains newest-first.
+- 릴리스 전에 정확한 배포 커밋에 주석 태그 `v<version>`을 생성·푸시한다. `gh release create`가 기본 브랜치를 암묵적으로 대상으로 삼게 두지 않는다.
+- 릴리스 메타데이터를 바로잡을 때는 낮은 버전부터 순서대로 재생성해 GitHub 생성 시각 목록이 최신 버전 우선으로 유지되게 한다.
+
 - Every release title and body must present Korean and English together, with the same meaning and the same technical values.
 - 모든 릴리스 제목과 본문은 한국어와 영어를 함께 제공하며, 의미와 버전·SHA-256·명령·URL 값이 서로 일치해야 합니다.
 - Use an actual Markdown file with `gh release create --notes-file <file>`. Do not pass escaped `\n` text to `--notes`; GitHub will display it literally instead of creating lines.
